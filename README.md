@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🏙️ CodeCity</h1>
+  <h1>CodeCity</h1>
   <p><b>Transform any GitHub repository into an interactive, AI-powered 3D city in your browser.</b></p>
 </div>
 
@@ -7,33 +7,33 @@ CodeCity is a next-generation 3D code visualizer designed to make exploring, und
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
-### 🏢 3D Interactive Visualization
+### 3D Interactive Visualization
 * **Buildings as Files:** Code files are rendered as 3D buildings. Height represents the number of Lines of Code (LOC), and width/color represents cyclomatic complexity.
 * **Districts as Directories:** A custom Treemap layout groups files into distinct neighborhood districts representing folder structure.
 * **Roads as Dependencies:** Import statements and module dependencies are mapped as physical roads connecting buildings, complete with animated directional traffic pulses.
 * **Atmospherics:** Beautiful glassmorphism UI overlays and an interactive Day/Night toggle (`N` shortcut) for premium aesthetics.
 
-### 🧠 Ask the City (AI Integration)
+### Ask the City (AI Integration)
 * **Natural Language Queries:** Chat directly with your codebase using the integrated LangChain + Anthropic Claude 3 Haiku model.
 * **Semantic Highlighting:** Ask questions like "Where is the authentication logic?" and watch the camera automatically pan to and highlight the relevant files in the 3D city.
 * **AI Summaries:** Hover over any building to read an AI-generated explanation of the file's exact purpose and responsibilities in plain English.
 
-### 🗺️ Sherpa Quests (Gamified Onboarding)
+### Sherpa Quests (Gamified Onboarding)
 * **Interactive Tutorials:** Dynamically generated quests act as a guided tour for new developers based on the actual repository architecture.
 * **Guided Completion:** Read explanations, follow clues, and travel to specific files/buildings to understand the critical paths of the codebase.
 
-### ⚡ Performance & Caching
+### Performance & Caching
 * **Redis Caching Layer:** Processed repository layouts and AST abstractions are cached to ensure instant loading on subsequent visits.
 * **Neo4j Graph Database:** Code dependencies are stored natively in a graph structure for advanced querying and dependency resolution.
 
-### 🔒 Authentication
+### Authentication
 * **GitHub OAuth:** Securely sign in using your GitHub account to access features, persist sessions, and manage api limits.
 
 ---
 
-## 🛠️ Tech Stack Architecture
+## Tech Stack Architecture
 
 CodeCity is built for scale, modularity, and rapid AI iteration:
 
@@ -48,7 +48,7 @@ CodeCity is built for scale, modularity, and rapid AI iteration:
 
 ---
 
-## 🚀 Setup & Installation
+## Setup & Installation
 
 Follow these steps to run CodeCity on your local machine. 
 
@@ -118,7 +118,7 @@ The application will be accessible at [http://localhost:3000](http://localhost:3
 
 ---
 
-## ☁️ AWS Lambda Deployment
+## AWS Lambda Deployment
 
 The backend is entirely serverless-compatible via the `Mangum` ASGI adapter.
 Deploying to AWS Lambda requires the execution role to have the following IAM permissions:

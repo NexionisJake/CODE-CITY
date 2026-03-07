@@ -10,9 +10,10 @@ interface Props {
   onClick: () => void;
   highlighted?: boolean;
   dimmed?: boolean;
+  nightMode?: boolean;
 }
 
-export default function Building({ building, onClick, highlighted, dimmed }: Props) {
+export default function Building({ building, onClick, highlighted, dimmed, nightMode = false }: Props) {
   const { file_path, position, dimensions, color, metadata } = building;
   const [hovered, setHovered] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
@@ -27,7 +28,9 @@ export default function Building({ building, onClick, highlighted, dimmed }: Pro
 
     // Apply complexity-based emissive tint to all meshes in the model
     const tintColor = new THREE.Color(color.r / 255, color.g / 255, color.b / 255);
-    const baseIntensity = Math.min(metadata.complexity / 50, 0.08); // very subtle at rest
+    const baseIntensity = nightMode
+      ? Math.min(metadata.complexity / 20, 0.4)
+      : Math.min(metadata.complexity / 50, 0.08);
 
     clone.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material) {
@@ -40,7 +43,7 @@ export default function Building({ building, onClick, highlighted, dimmed }: Pro
       }
     });
     return clone;
-  }, [scene, color, metadata.complexity]);
+  }, [scene, color, metadata.complexity, nightMode]);
 
   // Hover / highlight / dim effect
   useEffect(() => {

@@ -23,12 +23,12 @@ export default function BuildingTooltip({
   }[archetype];
 
   const complexityLabel =
-    complexity <= 2  ? "🟢 Pristine" :
-    complexity <= 5  ? "🟢 Healthy" :
-    complexity <= 8  ? "🟡 Moderate" :
-    complexity <= 11 ? "🟠 Elevated" :
-    complexity <= 15 ? "🔴 Concerning" :
-    complexity <= 20 ? "🔴 Critical" : "🔴 Toxic";
+    complexity <= 2 ? "🟢 Pristine" :
+      complexity <= 5 ? "🟢 Healthy" :
+        complexity <= 8 ? "🟡 Moderate" :
+          complexity <= 11 ? "🟠 Elevated" :
+            complexity <= 15 ? "🔴 Concerning" :
+              complexity <= 20 ? "🔴 Critical" : "🔴 Toxic";
 
   return (
     <div
@@ -72,6 +72,66 @@ export default function BuildingTooltip({
         <MetricCell label="Functions" value={metadata.function_count} />
         <MetricCell label="Complexity" value={`${complexityLabel} (${complexity})`} />
       </div>
+
+      {/* Social discussions section */}
+      {metadata.social?.message_count > 0 && (
+        <div style={{
+          marginTop: 0,
+          paddingTop: 10,
+          borderTop: "1px solid rgba(255,100,0,0.3)",
+          background: "rgba(255,80,0,0.08)",
+          borderRadius: "0 0 12px 12px",
+          padding: "8px 10px",
+        }}>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <span style={{ fontSize: 14 }}>💬</span>
+            <span style={{ color: "#ff8844", fontSize: 11, fontWeight: "bold", letterSpacing: "0.05em" }}>
+              TEAM DISCUSSIONS ({metadata.social.message_count} messages)
+            </span>
+          </div>
+
+          {/* Recent messages */}
+          {metadata.social.recent_messages.map((msg: any, i: number) => (
+            <div key={i} style={{
+              marginBottom: 8,
+              paddingBottom: 8,
+              borderBottom: i < metadata.social.recent_messages.length - 1
+                ? "1px solid rgba(255,255,255,0.06)" : "none"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                <span style={{ color: "#ff9966", fontSize: 10, fontWeight: "bold" }}>
+                  @{msg.user}
+                </span>
+                <span style={{ color: "#666", fontSize: 10 }}>{msg.channel}</span>
+              </div>
+              <div style={{ color: "#ddd", fontSize: 11, lineHeight: 1.4 }}>
+                {msg.text.length > 80 ? msg.text.slice(0, 80) + "…" : msg.text}
+              </div>
+              {msg.reactions?.length > 0 && (
+                <div style={{ marginTop: 4, fontSize: 12 }}>
+                  {msg.reactions.join(" ")}
+                </div>
+              )}
+              <div style={{ color: "#555", fontSize: 10, marginTop: 2 }}>{msg.timestamp}</div>
+            </div>
+          ))}
+
+          {/* Heat indicator */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+            <div style={{
+              width: `${metadata.social.heat_score * 10}%`,
+              height: 3,
+              background: "linear-gradient(to right, #ff8800, #ff2200)",
+              borderRadius: 2,
+              transition: "width 0.3s",
+            }} />
+            <span style={{ color: "#ff6633", fontSize: 10 }}>
+              Heat: {metadata.social.heat_score.toFixed(1)}/10
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

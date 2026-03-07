@@ -1,23 +1,14 @@
 # ai_service.py — Generates AI file summaries via AWS Bedrock Claude 3 Haiku with concurrent execution.
 
 import asyncio
-import json
-
-import boto3
-
+from src.llm_service import build_summary_chain
 
 AI_CAP = 15
-MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0"
-
-PROMPT_TEMPLATE = (
-    "You are a senior software architect. In exactly ONE sentence "
-    "(max 20 words), describe what this file does architecturally.\n\n"
-    "File: {file_path}\n\n{code}"
-)
+_summary_chain = build_summary_chain()
 
 
 async def enrich_with_ai(files: list[dict]) -> list[dict]:
-    """Add ai_summary to each file dict using AWS Bedrock Claude 3 Haiku.
+    """Add ai_summary to each file dict using LangChain.
 
     The first AI_CAP files are summarised concurrently. The rest get a
     placeholder string. Any per-file failure is caught and recorded
@@ -29,9 +20,6 @@ async def enrich_with_ai(files: list[dict]) -> list[dict]:
     Returns:
         The same list, mutated in place with ai_summary added.
     """
-    client = boto3.client("bedrock-runtime", region_name="us-east-1")
-    loop = asyncio.get_running_loop()
-
     # Sort by complexity+LOC score — summarise the most architecturally interesting files
     sorted_by_score = sorted(
         files,
@@ -41,11 +29,10 @@ async def enrich_with_ai(files: list[dict]) -> list[dict]:
 
     to_enrich = sorted_by_score[:AI_CAP]
     remainder = sorted_by_score[AI_CAP:]
-    enrich_set = {id(f) for f in to_enrich}
 
-    # Fire all Bedrock calls concurrently
+    # Fire all LangChain ainvoke calls concurrently
     tasks = [
-        loop.run_in_executor(None, _call_bedrock, client, f)
+        _summarise_file(f)
         for f in to_enrich
     ]
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -62,25 +49,23 @@ async def enrich_with_ai(files: list[dict]) -> list[dict]:
     return files
 
 
-def _call_bedrock(client, file_dict: dict) -> str:
-    """Synchronous Bedrock invoke for a single file."""
-    prompt = PROMPT_TEMPLATE.format(
-        file_path=file_dict["file_path"],
-        code=file_dict["raw_code"][:3000],
-    )
-
-    body = json.dumps({
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 80,
-        "messages": [{"role": "user", "content": prompt}],
-    })
-
-    resp = client.invoke_model(
-        modelId=MODEL_ID,
-        contentType="application/json",
-        accept="application/json",
-        body=body,
-    )
-
-    resp_body = json.loads(resp["body"].read())
-    return resp_body["content"][0]["text"].strip()
+async def _summarise_file(f: dict) -> str:
+    history = f.get("github_history", {})
+    commit_context = ""
+    if history.get("why_summary"):
+        commit_context = f"Recent commit context: {history['why_summary']}"
+    
+    try:
+        # Use LangChain chain instead of direct Bedrock call
+        result = await _summary_chain.ainvoke({
+            "file_path":      f["file_path"],
+            "language":       f.get("language", ""),
+            "loc":            f.get("loc", 0),
+            "complexity":     f.get("complexity", 0.0),
+            "function_count": f.get("function_count", 0),
+            "commit_context": commit_context,
+            "code_snippet":   f["raw_code"][:2000],
+        })
+        return result.strip()
+    except Exception as e:
+        return f"Summary unavailable: {e}"

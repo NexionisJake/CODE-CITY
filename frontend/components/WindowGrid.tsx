@@ -14,6 +14,7 @@ interface WindowGridProps {
   windowColor?: string;
   emissiveMin?: number;
   emissiveMax?: number;
+  nightMode?: boolean;
 }
 
 const WIN_W = 0.4;
@@ -31,6 +32,7 @@ export default function WindowGrid({
   windowColor = "#ffdd88",
   emissiveMin = 0.6,
   emissiveMax = 1.0,
+  nightMode = false,
 }: WindowGridProps) {
   // Generate stable lit/dark pattern + per-window intensity once
   const windows = useMemo(() => {
@@ -60,9 +62,9 @@ export default function WindowGrid({
           <mesh key={i} position={[wx, wy, faceOffset]}>
             <boxGeometry args={[WIN_W, WIN_H, WIN_D]} />
             <meshStandardMaterial
-              color={w.lit ? windowColor : "#111111"}
-              emissive={w.lit ? windowColor : "#000000"}
-              emissiveIntensity={w.intensity}
+              color={w.lit ? (nightMode ? "#ffffaa" : windowColor) : "#111111"}
+              emissive={w.lit ? (nightMode ? "#ffff44" : windowColor) : "#000000"}
+              emissiveIntensity={w.lit ? (nightMode ? w.intensity * 1.8 : w.intensity) : 0}
             />
           </mesh>
         );

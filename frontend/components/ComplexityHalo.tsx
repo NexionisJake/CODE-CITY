@@ -5,9 +5,10 @@ import * as THREE from "three";
 
 interface Props {
   building: any;
+  nightMode?: boolean;
 }
 
-export default function ComplexityHalo({ building }: Props) {
+export default function ComplexityHalo({ building, nightMode = false }: Props) {
   const { position, dimensions, color, metadata } = building;
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
 
@@ -29,8 +30,12 @@ export default function ComplexityHalo({ building }: Props) {
     }
   });
 
-  const baseIntensity = Math.min(0.8 + metadata.complexity / 15, 2.5);
-  const baseOpacity = Math.min(0.35 + metadata.complexity / 40, 0.7);
+  const baseIntensity = nightMode
+    ? Math.min(2.0 + metadata.complexity / 8, 5.0)
+    : Math.min(0.8 + metadata.complexity / 15, 2.5);
+  const baseOpacity = nightMode
+    ? Math.min(0.7 + metadata.complexity / 20, 0.95)
+    : Math.min(0.35 + metadata.complexity / 40, 0.7);
 
   return (
     <>

@@ -17,98 +17,74 @@ interface Props {
 export default function DistrictOverlay({ buildings }: Props) {
   // Group buildings by their cluster key (top-level directory)
   const districts = useMemo(() => {
-    const map = new Map<string, any[]>();
+    const map = new Map<string, {
+      rect: { x: number; z: number; w: number; d: number };
+      color: { r: number; g: number; b: number };
+      label: string;
+    }>();
+
     buildings.forEach(b => {
-      const parts = b.file_path.replace(/\\/g, "/").split("/");
-      const key = parts.length >= 3 ? parts[1] : parts.length === 2 ? parts[0] : "__root__";
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(b);
+      if (b.district && b.district_meta && !map.has(b.district)) {
+        map.set(b.district, b.district_meta);
+      }
     });
-    return map;
+
+    return Array.from(map.values());
   }, [buildings]);
-
-  const patches = useMemo(() => {
-    const result: Array<{
-      key: string;
-      cx: number; cz: number;
-      width: number; depth: number;
-      color: string;
-    }> = [];
-
-    let colorIdx = 0;
-    for (const [key, group] of districts.entries()) {
-      if (group.length === 0) continue;
-
-      const xs = group.map((b: any) => b.position.x);
-      const zs = group.map((b: any) => b.position.z);
-      const minX = Math.min(...xs) - 12;
-      const maxX = Math.max(...xs) + 12;
-      const minZ = Math.min(...zs) - 12;
-      const maxZ = Math.max(...zs) + 12;
-
-      result.push({
-        key,
-        cx: (minX + maxX) / 2,
-        cz: (minZ + maxZ) / 2,
-        width: maxX - minX,
-        depth: maxZ - minZ,
-        color: DISTRICT_COLORS[colorIdx % DISTRICT_COLORS.length],
-      });
-      colorIdx++;
-    }
-    return result;
-  }, [districts]);
 
   return (
     <>
-      {patches.map(patch => (
-        <group key={patch.key}>
-          {/* Colored ground patch */}
-          <mesh
-            position={[patch.cx, 0.02, patch.cz]}
-            rotation={[-Math.PI / 2, 0, 0]}
-          >
-            <planeGeometry args={[patch.width, patch.depth]} />
-            <meshStandardMaterial
-              color={patch.color}
-              transparent
-              opacity={0.12}
-              depthWrite={false}
-            />
-          </mesh>
+      {districts.map((d, i) => {
+        const { rect, color, label } = d;
+        const cx = rect.x + rect.w / 2;
+        const cz = rect.z + rect.d / 2;
+        const hexColor = `rgb(${Math.round(color.r * 255)},${Math.round(color.g * 255)},${Math.round(color.b * 255)})`;
 
-          {/* Subtle border outline */}
-          <lineSegments position={[patch.cx, 0.03, patch.cz]}>
-            <edgesGeometry
-              args={[new THREE.BoxGeometry(patch.width, 0.01, patch.depth)]}
-            />
-            <lineBasicMaterial color={patch.color} transparent opacity={0.4} />
-          </lineSegments>
+        return (
+          <group key={label}>
+            {/* Ground patch */}
+            <mesh position={[cx, 0.01, cz]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[rect.w, rect.d]} />
+              <meshStandardMaterial color={hexColor} transparent opacity={0.10} depthWrite={false} />
+            </mesh>
 
-          {/* Floating district label */}
-          <Html
-            position={[patch.cx, 2, patch.cz - patch.depth / 2 - 4]}
-            center
-            style={{ pointerEvents: "none" }}
-          >
-            <div style={{
-              background: `${patch.color}cc`,
-              color: "white",
-              padding: "3px 12px",
-              borderRadius: "4px",
-              fontSize: "12px",
-              fontWeight: "bold",
-              fontFamily: "monospace",
-              whiteSpace: "nowrap",
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-            }}>
-              {patch.key}
-            </div>
-          </Html>
-        </group>
-      ))}
+            {/* Subtle border outline */}
+            <lineSegments position={[cx, 0.05, cz]}>
+              <edgesGeometry args={[new THREE.BoxGeometry(rect.w, 0.01, rect.d)]} />
+              <lineBasicMaterial color={hexColor} transparent opacity={0.5} />
+            </lineSegments>
+
+            {/* Floating label — positioned at top-center of district, elevated high enough to clear buildings */}
+            <Html
+              position={[cx, 8, cz]}   // center of district, elevated 8 units
+              center
+              style={{ pointerEvents: "none" }}
+              occlude={false}
+            >
+              <div style={{
+                background: `rgba(${Math.round(color.r * 255)},${Math.round(color.g * 255)},${Math.round(color.b * 255)},0.9)`,
+                color: "white",
+                padding: "4px 10px",
+                borderRadius: "4px",
+                fontSize: "10px",
+                fontWeight: "bold",
+                fontFamily: "monospace",
+                whiteSpace: "nowrap",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                // Truncate long names
+                maxWidth: "120px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}>
+                📁 {label.length > 14 ? label.slice(0, 13) + "…" : label}
+              </div>
+            </Html>
+          </group>
+        );
+      })}
     </>
   );
 }

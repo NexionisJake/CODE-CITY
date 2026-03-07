@@ -12,8 +12,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://*.amplifyapp.com",
-        "*",  # Remove this line before final production hardening
     ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

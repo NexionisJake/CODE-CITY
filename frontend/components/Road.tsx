@@ -11,9 +11,10 @@ interface Props {
   endBuilding: any;
   simplified?: boolean;
   animated?: boolean;
+  nightMode?: boolean;
 }
 
-export default function Road({ road, startBuilding, endBuilding, simplified, animated }: Props) {
+export default function Road({ road, startBuilding, endBuilding, simplified, animated, nightMode = false }: Props) {
   if (!startBuilding || !endBuilding) return null;
 
   // Building centers
@@ -57,29 +58,69 @@ export default function Road({ road, startBuilding, endBuilding, simplified, ani
         rotation={[0, baseAngle, 0]}
       >
         <boxGeometry args={[0.4, 0.08, totalLength]} />
-        <meshStandardMaterial color="#aaaaaa" transparent opacity={0.3} />
+        <meshStandardMaterial
+          color="#aaaaaa"
+          transparent
+          opacity={0.3}
+          emissive={nightMode ? "#cc9933" : "#000000"}
+          emissiveIntensity={nightMode ? 1.5 : 0.3}
+        />
       </mesh>
     );
   }
 
+  const isCrossDistrict = road.cross_district === true;
+
+  // For cross-district roads: raise Y position and use golden color
+  const roadY = isCrossDistrict ? 3.0 : 0.08;
+  const roadColor = isCrossDistrict ? "#cc9933" : (road.directed ? "#6699bb" : "#999990");
+  const roadWidth = isCrossDistrict ? 1.8 : (road.directed ? 1.2 : 0.8);
+  const roadOpacity = isCrossDistrict ? 0.9 : 0.75;
+
   // Simplified: flat colored box (fast, readable at scale)
   if (simplified || totalLength < 1.5) {
-    const roadColor = road.directed ? "#6699bb" : "#999990";
-    const roadWidth = road.directed ? 1.2 : 0.8;
-
     return (
-      <mesh
-        position={[mx, 0.08, mz]}
-        rotation={[0, baseAngle, 0]}
-      >
-        <boxGeometry args={[roadWidth, ROAD_HEIGHT, totalLength]} />
-        <meshStandardMaterial
-          color={roadColor}
-          roughness={0.8}
-          transparent
-          opacity={0.75}
-        />
-      </mesh>
+      <group>
+        <mesh
+          position={[mx, roadY, mz]}
+          rotation={[0, baseAngle, 0]}
+        >
+          <boxGeometry args={[roadWidth, isCrossDistrict ? 0.3 : ROAD_HEIGHT, totalLength]} />
+          <meshStandardMaterial
+            color={roadColor}
+            roughness={0.6}
+            metalness={isCrossDistrict ? 0.4 : 0.0}
+            transparent
+            opacity={roadOpacity}
+            emissive={isCrossDistrict ? "#cc9933" : "#000000"}
+            emissiveIntensity={isCrossDistrict ? 0.3 : 0.0}
+          />
+        </mesh>
+
+        {isCrossDistrict && totalLength > 20 && (
+          <>
+            {Array.from({ length: Math.floor(totalLength / 40) }, (_, i) => {
+              const t = (i + 1) / (Math.floor(totalLength / 40) + 1);
+              return (
+                <mesh key={i} position={[sx + dx * t, roadY / 2, sz + dz * t]}>
+                  <cylinderGeometry args={[0.3, 0.3, roadY, 6]} />
+                  <meshStandardMaterial color="#886622" metalness={0.5} roughness={0.4} />
+                </mesh>
+              );
+            })}
+          </>
+        )}
+        {road.directed && animated && totalLength > 5 && (
+          <RoadPulse
+            start={[sx, roadY, sz]}
+            end={[ex, roadY, ez]}
+            color="#00ccff"
+            speed={0.12}
+            offset={((startBuilding.position.x + endBuilding.position.z) % 100) / 100}
+            nightMode={nightMode}
+          />
+        )}
+      </group>
     );
   }
 
@@ -87,23 +128,46 @@ export default function Road({ road, startBuilding, endBuilding, simplified, ani
   return (
     <group>
       <mesh
-        position={[mx, ROAD_HEIGHT / 2, mz]}
+        position={[mx, roadY, mz]}
         rotation={[0, baseAngle, 0]}
       >
-        <boxGeometry args={[1.8, ROAD_HEIGHT, totalLength]} />
-        <meshStandardMaterial color="#888880" roughness={0.95} />
+        <boxGeometry args={[1.8, isCrossDistrict ? 0.3 : ROAD_HEIGHT, totalLength]} />
+        <meshStandardMaterial
+          color={roadColor}
+          roughness={0.6}
+          metalness={isCrossDistrict ? 0.4 : 0.0}
+          transparent
+          opacity={roadOpacity}
+          emissive={isCrossDistrict ? "#cc9933" : "#000000"}
+          emissiveIntensity={isCrossDistrict ? 0.3 : 0.0}
+        />
       </mesh>
+
+      {/* Support pillars for cross-district detailed roads */}
+      {isCrossDistrict && totalLength > 20 && (
+        <>
+          {Array.from({ length: Math.floor(totalLength / 40) }, (_, i) => {
+            const t = (i + 1) / (Math.floor(totalLength / 40) + 1);
+            return (
+              <mesh key={i} position={[sx + dx * t, roadY / 2, sz + dz * t]}>
+                <cylinderGeometry args={[0.3, 0.3, roadY, 6]} />
+                <meshStandardMaterial color="#886622" metalness={0.5} roughness={0.4} />
+              </mesh>
+            );
+          })}
+        </>
+      )}
 
       {/* Entrance pads at building bases */}
       {totalLength > 3 && (
         <>
-          <mesh position={[sx, ROAD_HEIGHT / 2, sz]}>
-            <boxGeometry args={[2.5, ROAD_HEIGHT, 2.5]} />
-            <meshStandardMaterial color="#888880" roughness={0.95} />
+          <mesh position={[sx, roadY, sz]}>
+            <boxGeometry args={[2.5, isCrossDistrict ? 0.3 : ROAD_HEIGHT, 2.5]} />
+            <meshStandardMaterial color={roadColor} roughness={0.95} />
           </mesh>
-          <mesh position={[ex, ROAD_HEIGHT / 2, ez]}>
-            <boxGeometry args={[2.5, ROAD_HEIGHT, 2.5]} />
-            <meshStandardMaterial color="#888880" roughness={0.95} />
+          <mesh position={[ex, roadY, ez]}>
+            <boxGeometry args={[2.5, isCrossDistrict ? 0.3 : ROAD_HEIGHT, 2.5]} />
+            <meshStandardMaterial color={roadColor} roughness={0.95} />
           </mesh>
         </>
       )}
@@ -111,14 +175,14 @@ export default function Road({ road, startBuilding, endBuilding, simplified, ani
       {/* Direction arrow at midpoint */}
       {road.directed && (
         <mesh
-          position={[mx, 0.5, mz]}
+          position={[mx, roadY + 0.4, mz]}
           rotation={[-Math.PI / 2, 0, -baseAngle]}
         >
           <coneGeometry args={[0.4, 1.0, 5]} />
           <meshStandardMaterial
             color="#00ccff"
             emissive="#00ccff"
-            emissiveIntensity={0.8}
+            emissiveIntensity={nightMode ? 2.0 : 0.8}
             transparent
             opacity={0.85}
           />
@@ -127,11 +191,12 @@ export default function Road({ road, startBuilding, endBuilding, simplified, ani
 
       {road.directed && animated && totalLength > 5 && (
         <RoadPulse
-          start={[sx, 0, sz]}
-          end={[ex, 0, ez]}
+          start={[sx, roadY, sz]}
+          end={[ex, roadY, ez]}
           color="#00ccff"
-          speed={0.3}
+          speed={0.12}
           offset={((startBuilding.position.x + endBuilding.position.z) % 100) / 100}
+          nightMode={nightMode}
         />
       )}
     </group>

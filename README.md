@@ -33,3 +33,13 @@ The API will be available at `http://localhost:8000`. Check health at `GET /heal
 
 - `GET /health` — Returns `{"status": "ok"}`
 - `POST /api/build-city` — Accepts `{"repo_url": "https://github.com/user/repo"}`, returns city data
+
+## AWS Lambda Deployment
+The backend is Lambda-compatible via the Mangum ASGI adapter.
+The Lambda execution role needs these permissions:
+
+- `bedrock:InvokeModel` (for Claude summaries)
+- `s3:GetObject`, `s3:PutObject` (for repo archive storage)
+- `elasticache:Connect` (for Redis cache)
+
+See `lambda_handler.py` for deployment instructions.

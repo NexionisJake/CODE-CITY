@@ -4,12 +4,13 @@ import { useState, useMemo } from "react";
 interface Props {
   buildings: any[];
   cameraTarget: { x: number; z: number };
+  onNavigate?: (worldX: number, worldZ: number) => void;
 }
 
 const MAP_SIZE = 180; // px
-const PADDING  = 10;  // px
+const PADDING = 10;  // px
 
-export default function Minimap({ buildings, cameraTarget }: Props) {
+export default function Minimap({ buildings, cameraTarget, onNavigate }: Props) {
   const [collapsed, setCollapsed] = useState(false);
 
   // Calculate city bounds
@@ -36,21 +37,48 @@ export default function Minimap({ buildings, cameraTarget }: Props) {
 
   return (
     <div
-      className="absolute bottom-6 left-6 z-20 bg-gray-900/90 backdrop-blur border border-gray-700 rounded-xl overflow-hidden"
+      className="city-panel absolute bottom-6 right-6 z-20 bg-gray-900/90 backdrop-blur border border-gray-700 rounded-xl overflow-hidden"
       style={{ width: MAP_SIZE + 20 }}
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-3 py-2 cursor-pointer select-none"
+        className="flex items-center justify-between px-3 py-2 cursor-pointer select-none hover:bg-gray-800/50 transition-colors"
         onClick={() => setCollapsed(c => !c)}
       >
-        <span className="text-gray-400 text-xs font-medium">Map</span>
-        <span className="text-gray-600 text-xs">{collapsed ? "▲" : "▼"}</span>
+        <span className="text-gray-400 text-xs font-medium flex items-center gap-1.5">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" opacity="0.6">
+            <rect x="1" y="4" width="3" height="7" rx="0.5" />
+            <rect x="5" y="2" width="3" height="9" rx="0.5" />
+            <rect x="9" y="3" width="2" height="8" rx="0.5" />
+          </svg>
+          Map
+        </span>
+        <svg
+          width="12" height="12" viewBox="0 0 12 12" fill="none"
+          stroke="currentColor" strokeWidth="1.5"
+          className={`text-gray-600 transition-transform duration-200 ${collapsed ? '' : 'rotate-180'}`}
+        >
+          <path d="M2 4.5L6 8l4-3.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </div>
 
       {!collapsed && (
         <div className="px-2 pb-2">
-          <svg width={MAP_SIZE} height={MAP_SIZE} style={{ display: "block" }}>
+          <svg
+            width={MAP_SIZE}
+            height={MAP_SIZE}
+            style={{ display: "block", cursor: onNavigate ? "crosshair" : "default" }}
+            onClick={(e) => {
+              if (!onNavigate) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const mapX = e.clientX - rect.left;
+              const mapY = e.clientY - rect.top;
+              // Convert map coords back to world coords
+              const worldX = bounds.minX + (mapX - PADDING) / (MAP_SIZE - PADDING * 2) * (bounds.maxX - bounds.minX);
+              const worldZ = bounds.minZ + (mapY - PADDING) / (MAP_SIZE - PADDING * 2) * (bounds.maxZ - bounds.minZ);
+              onNavigate(worldX, worldZ);
+            }}
+          >
             {/* Background */}
             <rect width={MAP_SIZE} height={MAP_SIZE} fill="#0a0a14" rx={4} />
 
@@ -72,6 +100,24 @@ export default function Minimap({ buildings, cameraTarget }: Props) {
               );
             })}
 
+            {/* Viewport indicator */}
+            {(() => {
+              const viewSize = 80; // world units visible — approximate
+              const vx = toMapX(cameraTarget.x - viewSize / 2);
+              const vz = toMapZ(cameraTarget.z - viewSize / 2);
+              const vw = (viewSize / (bounds.maxX - bounds.minX)) * (MAP_SIZE - PADDING * 2);
+              const vh = (viewSize / (bounds.maxZ - bounds.minZ)) * (MAP_SIZE - PADDING * 2);
+              return (
+                <rect
+                  x={Math.max(0, vx)} y={Math.max(0, vz)}
+                  width={Math.min(vw, MAP_SIZE)} height={Math.min(vh, MAP_SIZE)}
+                  fill="none" stroke="white" strokeWidth={1}
+                  strokeDasharray="3 2" opacity={0.3}
+                  style={{ pointerEvents: 'none' }}
+                />
+              );
+            })()}
+
             {/* Camera crosshair */}
             <line
               x1={camX - 6} y1={camZ}
@@ -87,7 +133,7 @@ export default function Minimap({ buildings, cameraTarget }: Props) {
           </svg>
 
           <p className="text-gray-600 text-xs mt-1 text-center">
-            {buildings.length} buildings
+            {buildings.length} buildings · click to navigate
           </p>
         </div>
       )}

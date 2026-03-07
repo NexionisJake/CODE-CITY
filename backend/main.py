@@ -7,12 +7,15 @@ from src.api import router
 
 app = FastAPI(title="CodeCity", description="3D GitHub repository visualizer")
 
+import os
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "https://*.amplifyapp.com",
+        os.getenv("FRONTEND_URL", "http://localhost:3000"),
     ],
+    allow_origin_regex=r"https://.*\.amplifyapp\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

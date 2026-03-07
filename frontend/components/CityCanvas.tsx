@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useRef, useEffect, Suspense } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Grid } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
@@ -14,10 +14,13 @@ import DistrictOverlay from "./DistrictOverlay";
 import Minimap from "./Minimap";
 import SherpaMode from "./SherpaMode";
 import AskTheCity from "./AskTheCity";
+import ColorLegend from "./ColorLegend";
+import TutorialOverlay from "./TutorialOverlay";
 
 interface Props {
   data: any;
   nightMode?: boolean;
+  onNightModeToggle?: () => void;
 }
 
 /** Smoothly lerps lights between day and night every frame */
@@ -116,19 +119,57 @@ function DynamicGround({ nightMode }: { nightMode: boolean }) {
   );
 }
 
-export default function CityCanvas({ data, nightMode = false }: Props) {
+export default function CityCanvas({ data, nightMode = false, onNightModeToggle }: Props) {
   const [selected, setSelected] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [cameraTarget, setCameraTarget] = useState({ x: 0, z: 0 });
   const [sherpaHighlightIds, setSherpaHighlightIds] = useState<Set<string>>(new Set());
   const [askTheCityHighlightIds, setAskTheCityHighlightIds] = useState<Set<string>>(new Set());
+  const [activePanel, setActivePanel] = useState<"sherpa" | "ask" | null>(null);
+  const [statFilter, setStatFilter] = useState<"hotspots" | "discussed" | "recent" | null>(null);
   const controlsRef = useRef<any>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Add state — track if tutorial has been shown this session
+  // (use sessionStorage so it shows once per session, not per page load)
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [cameraDistance, setCameraDistance] = useState(200);
+
+  // Show tutorial when city first loads
+  useEffect(() => {
+    if (data && !sessionStorage.getItem("codecity_tutorial_shown")) {
+      // Small delay so the city finishes building before overlay appears
+      const timer = setTimeout(() => setShowTutorial(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [data]);
+
+  const handleTutorialDismiss = () => {
+    setShowTutorial(false);
+    sessionStorage.setItem("codecity_tutorial_shown", "1");
+  };
 
   const buildingMap = useMemo(() => {
     const map: Record<string, any> = {};
     data.buildings.forEach((b: any) => { map[b.id] = b; });
     return map;
   }, [data.buildings]);
+
+  // Pre-compute stat highlight sets
+  const statHighlightSets = useMemo(() => {
+    if (!data) return {} as Record<string, Set<string>>;
+    return {
+      hotspots: new Set<string>(data.buildings.filter((b: any) => b.metadata.is_hotspot).map((b: any) => b.id)),
+      discussed: new Set<string>(data.buildings.filter((b: any) => b.metadata.social?.message_count > 0).map((b: any) => b.id)),
+      recent: new Set<string>(data.buildings.filter((b: any) => b.metadata.git_churn?.is_recent).map((b: any) => b.id)),
+    };
+  }, [data]);
+
+  // Handle search — clears stat filter when user types
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    if (query) setStatFilter(null); // clear stat filter when searching
+  }, []);
 
   // Search: compute highlighted IDs
   const searchHighlightIds = useMemo(() => {
@@ -146,7 +187,7 @@ export default function CityCanvas({ data, nightMode = false }: Props) {
     );
   }, [searchQuery, data.buildings]);
 
-  // Merge search + sherpa highlights + ask the city highlights
+  // Merge search + sherpa + ask the city highlights
   const highlightedIds = useMemo(() => {
     const merged = new Set<string>(searchHighlightIds);
     sherpaHighlightIds.forEach(id => merged.add(id));
@@ -154,8 +195,15 @@ export default function CityCanvas({ data, nightMode = false }: Props) {
     return merged;
   }, [searchHighlightIds, sherpaHighlightIds, askTheCityHighlightIds]);
 
-  const hasSearch = searchQuery.trim().length > 0;
-  const hasHighlight = highlightedIds.size > 0;
+  // Effective highlights: stat filter takes priority when active
+  const effectiveHighlights = useMemo(() => {
+    if (statFilter && statHighlightSets[statFilter]) {
+      return statHighlightSets[statFilter] as Set<string>;
+    }
+    return highlightedIds;
+  }, [statFilter, statHighlightSets, highlightedIds]);
+
+  const hasHighlight = effectiveHighlights.size > 0;
 
   // Fly camera to first match
   useEffect(() => {
@@ -193,10 +241,90 @@ export default function CityCanvas({ data, nightMode = false }: Props) {
   const camX = cityBounds.centerX;
   const camZ = cityBounds.centerZ + camDistance;
 
+  // Smooth camera reset to city center
+  const resetCamera = useCallback(() => {
+    if (!controlsRef.current) return;
+    const target = new THREE.Vector3(cityBounds.centerX, 0, cityBounds.centerZ);
+    const startTarget = controlsRef.current.target.clone();
+    const startTime = Date.now();
+    const duration = 800;
+    const animate = () => {
+      const t = Math.min((Date.now() - startTime) / duration, 1);
+      const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      controlsRef.current.target.lerpVectors(startTarget, target, eased);
+      controlsRef.current.update();
+      if (t < 1) requestAnimationFrame(animate);
+    };
+    animate();
+  }, [cityBounds]);
+
+  // Keyboard shortcuts: / focuses search, Escape clears, Home resets camera
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
+        const active = document.activeElement;
+        if (active?.tagName !== "INPUT" && active?.tagName !== "TEXTAREA") {
+          e.preventDefault();
+          searchInputRef.current?.focus();
+        }
+      }
+      if (e.key === "Escape") {
+        setSearchQuery("");
+        setStatFilter(null);
+        searchInputRef.current?.blur();
+      }
+      if (e.key === "Home") {
+        resetCamera();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    // Also listen for the Reset button event from the parent page
+    const handleResetEvent = () => resetCamera();
+    window.addEventListener("codecity:resetCamera", handleResetEvent);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      window.removeEventListener("codecity:resetCamera", handleResetEvent);
+    };
+  }, [resetCamera]);
+
+  // Stat items for the stats bar (clickable ones highlight buildings)
+  const statItems = useMemo(() => [
+    {
+      icon: "📄",
+      value: data.buildings.length,
+      label: "files",
+      filter: null as null,
+      tip: "Total source files",
+    },
+    {
+      icon: "🔗",
+      value: data.roads.length,
+      label: "connections",
+      filter: null as null,
+      tip: "Import dependencies",
+    },
+    {
+      icon: "🔥",
+      value: statHighlightSets.hotspots?.size ?? 0,
+      label: "hotspots",
+      filter: "hotspots" as const,
+      color: "text-red-400",
+      tip: "Click to highlight high-complexity files",
+    },
+    ...(statHighlightSets.discussed?.size ?? 0) > 0 ? [{
+      icon: "💬",
+      value: statHighlightSets.discussed?.size ?? 0,
+      label: "discussed",
+      filter: "discussed" as const,
+      color: "text-orange-400",
+      tip: "Click to highlight team-discussed files",
+    }] : [],
+  ], [data, statHighlightSets]);
+
   return (
     <>
       <Canvas
-        shadows
+        shadows={{ type: THREE.PCFShadowMap }}
         gl={{ antialias: true, powerPreference: "high-performance" }}
         dpr={[1, 1.5]}
         camera={{ position: [camX, camHeight, camZ], fov: 55, near: 1, far: 8000 }}
@@ -233,7 +361,7 @@ export default function CityCanvas({ data, nightMode = false }: Props) {
         )}
 
         {/* District ground patches and labels */}
-        <DistrictOverlay buildings={data.buildings} />
+        <DistrictOverlay buildings={data.buildings} cameraDistance={cameraDistance} />
 
         {/* Complexity halos under every building */}
         {data.buildings.map((b: any) => (
@@ -247,8 +375,8 @@ export default function CityCanvas({ data, nightMode = false }: Props) {
               <Building
                 building={b}
                 onClick={() => setSelected(b)}
-                highlighted={highlightedIds.has(b.id)}
-                dimmed={hasHighlight && !highlightedIds.has(b.id)}
+                highlighted={effectiveHighlights.has(b.id)}
+                dimmed={hasHighlight && !effectiveHighlights.has(b.id)}
                 nightMode={nightMode}
               />
               {b.metadata.social?.heat_score > 0 && (
@@ -296,6 +424,7 @@ export default function CityCanvas({ data, nightMode = false }: Props) {
             if (controlsRef.current) {
               const t = controlsRef.current.target;
               setCameraTarget({ x: t.x, z: t.z });
+              setCameraDistance(controlsRef.current.getDistance());
             }
           }}
         />
@@ -317,50 +446,208 @@ export default function CityCanvas({ data, nightMode = false }: Props) {
         </EffectComposer>
       </Canvas>
 
-      {/* Search overlay */}
-      <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-        <div className="relative">
+      {/* Enhanced Search overlay */}
+      <div className="absolute top-4 left-4 z-20 flex flex-col gap-1">
+        <div className="flex items-center gap-2 bg-gray-900/90 backdrop-blur border border-gray-700 hover:border-gray-600 focus-within:border-blue-500/60 focus-within:shadow-lg focus-within:shadow-blue-500/10 rounded-lg px-3 py-2 transition-all duration-200">
+          {/* Search icon */}
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-gray-500 flex-shrink-0">
+            <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+            <path d="m9.5 9.5 2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+
           <input
+            ref={searchInputRef}
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search files..."
-            className="bg-gray-900/80 backdrop-blur text-white text-sm rounded-lg pl-3 pr-8 py-2 border border-gray-700 focus:outline-none focus:border-blue-500 placeholder-gray-500 w-64"
+            className="bg-transparent text-white text-sm outline-none w-44 placeholder-gray-600"
           />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-lg leading-none"
-            >
-              &times;
-            </button>
+
+          {/* Match count OR keyboard shortcut hint */}
+          {searchQuery ? (
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {searchHighlightIds.size > 0 && (
+                <span className="text-blue-400 text-xs font-medium">
+                  {searchHighlightIds.size}
+                </span>
+              )}
+              <button
+                onClick={() => handleSearch("")}
+                className="text-gray-600 hover:text-white text-sm transition-colors"
+              >×</button>
+            </div>
+          ) : (
+            <kbd className="flex-shrink-0 text-gray-600 text-xs bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 font-mono">
+              /
+            </kbd>
           )}
         </div>
-        {hasSearch && (
-          <span className="text-sm text-gray-300 bg-gray-900/80 backdrop-blur border border-gray-800 rounded-lg px-3 py-2">
-            {searchHighlightIds.size} match{searchHighlightIds.size !== 1 ? "es" : ""}
-          </span>
+
+        {/* Result count below input */}
+        {searchHighlightIds.size > 0 && searchQuery && (
+          <div className="text-xs text-gray-500 px-1 animate-fade-in">
+            {searchHighlightIds.size} match{searchHighlightIds.size !== 1 ? 'es' : ''} — others dimmed
+          </div>
+        )}
+
+        {/* Stat filter indicator */}
+        {statFilter && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 px-1 animate-fade-in">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+            Filtering by {statFilter} — <button onClick={() => setStatFilter(null)} className="text-blue-400 hover:text-blue-300">clear</button>
+          </div>
         )}
       </div>
 
-      {/* Minimap */}
+      {/* Clickable stats bar + camera controls — top-right */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-1">
+        <div className="flex items-center bg-gray-900/90 backdrop-blur border border-gray-700 rounded-lg overflow-hidden text-sm">
+          {statItems.map((stat, i) => (
+            <div
+              key={stat.label}
+              className={`
+                flex items-center gap-1.5 px-3 py-2
+                ${i > 0 ? 'border-l border-gray-700/60' : ''}
+                ${stat.filter ? 'cursor-pointer hover:bg-gray-700/50 transition-colors' : ''}
+                ${statFilter === stat.filter && stat.filter ? 'bg-gray-700/60' : ''}
+              `}
+              onClick={() => {
+                if (stat.filter) {
+                  setStatFilter(f => f === stat.filter ? null : stat.filter);
+                  if (stat.filter !== statFilter) handleSearch("");
+                }
+              }}
+              title={stat.tip}
+            >
+              <span className="text-xs">{stat.icon}</span>
+              <span className={`font-semibold ${'color' in stat ? stat.color : 'text-gray-200'}`}>
+                {stat.value}
+              </span>
+              <span className="text-gray-500 text-xs hidden sm:inline">{stat.label}</span>
+              {/* Active filter indicator dot */}
+              {statFilter === stat.filter && stat.filter && (
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse ml-0.5" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Camera reset button */}
+        <button
+          onClick={() => resetCamera()}
+          className="ml-1 flex items-center gap-1.5 bg-gray-900/90 backdrop-blur border border-gray-700 hover:border-gray-500 rounded-lg px-3 py-2 text-gray-400 hover:text-white text-xs transition-all duration-200"
+          title="Reset camera view (Home)"
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4">
+            <path d="M1.5 6.5h10M6.5 1.5v10M3 4l-1.5 2.5L3 9M10 4l1.5 2.5L10 9" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="hidden sm:inline">Reset</span>
+        </button>
+
+        {/* Night mode toggle */}
+        {onNightModeToggle && (
+          <button
+            onClick={onNightModeToggle}
+            className={`
+              relative flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium
+              transition-all duration-300 overflow-hidden ml-1
+              ${nightMode
+                ? 'bg-indigo-950/80 border-indigo-700/60 text-indigo-300 hover:border-indigo-500 shadow-lg shadow-indigo-500/20'
+                : 'bg-gray-900/90 border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200'
+              }
+            `}
+            title={nightMode ? "Switch to day mode" : "Switch to night mode (N)"}
+          >
+            {/* Animated icon swap */}
+            <div className="relative w-4 h-4">
+              {/* Sun icon */}
+              <svg
+                width="14" height="14" viewBox="0 0 14 14" fill="none"
+                stroke="currentColor" strokeWidth="1.3"
+                className={`absolute inset-0 transition-all duration-500 ${nightMode ? 'opacity-0 rotate-90 scale-50' : 'opacity-100 rotate-0 scale-100'
+                  }`}
+              >
+                <circle cx="7" cy="7" r="2.5" />
+                <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M3 3l1 1M10 10l1 1M10 3l1-1M3 10l1-1" strokeLinecap="round" />
+              </svg>
+
+              {/* Moon icon */}
+              <svg
+                width="14" height="14" viewBox="0 0 14 14" fill="none"
+                stroke="currentColor" strokeWidth="1.3"
+                className={`absolute inset-0 transition-all duration-500 ${nightMode ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'
+                  }`}
+              >
+                <path d="M11.5 8.5A5 5 0 0 1 5.5 2.5a5 5 0 1 0 6 6z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
+            {/* Label */}
+            <span className={`transition-all duration-300 ${nightMode ? 'text-indigo-300' : 'text-gray-400'}`}>
+              {nightMode ? "Night" : "Day"}
+            </span>
+          </button>
+        )}
+
+        {/* Help button */}
+        <button
+          onClick={() => setShowTutorial(true)}
+          className="ml-1 w-8 h-8 flex items-center justify-center bg-gray-900/90 backdrop-blur border border-gray-700 hover:border-gray-500 rounded-lg text-gray-500 hover:text-gray-300 transition-all duration-150 text-sm font-bold"
+          title="Show controls guide"
+        >
+          ?
+        </button>
+      </div>
+
+      {/* Minimap — bottom-right */}
       <Minimap
         buildings={data.buildings}
         cameraTarget={cameraTarget}
+        onNavigate={(worldX, worldZ) => {
+          if (!controlsRef.current) return;
+          const target = new THREE.Vector3(worldX, 0, worldZ);
+          controlsRef.current.target.lerp(target, 1.0);
+          controlsRef.current.update();
+        }}
       />
 
-      {/* Sherpa Mode */}
+      {/* Color Legend — bottom-left */}
+      <ColorLegend />
+
+      {/* Sherpa Mode — mutually exclusive with Ask the City */}
       <SherpaMode
         data={data}
         controlsRef={controlsRef}
         onHighlight={(ids: Set<string>) => setSherpaHighlightIds(ids)}
+        isOpen={activePanel === "sherpa"}
+        onOpen={() => setActivePanel("sherpa")}
+        onClose={() => setActivePanel(null)}
       />
 
-      {/* Ask the City Overlay */}
+      {/* Ask the City Overlay — mutually exclusive with Sherpa */}
       {data && (
         <AskTheCity
           data={data}
           onHighlight={(ids) => setAskTheCityHighlightIds(ids)}
+          isOpen={activePanel === "ask"}
+          onOpen={() => setActivePanel("ask")}
+          onClose={() => setActivePanel(null)}
+          onFlyTo={(worldX, worldZ) => {
+            if (!controlsRef.current) return;
+            const target = new THREE.Vector3(worldX, 0, worldZ);
+            const startTarget = controlsRef.current.target.clone();
+            const startTime = Date.now();
+            const duration = 1000;
+            const animate = () => {
+              const t = Math.min((Date.now() - startTime) / duration, 1);
+              const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+              controlsRef.current.target.lerpVectors(startTarget, target, eased);
+              controlsRef.current.update();
+              if (t < 1) requestAnimationFrame(animate);
+            };
+            animate();
+          }}
         />
       )}
 
@@ -370,6 +657,10 @@ export default function CityCanvas({ data, nightMode = false }: Props) {
           building={selected}
           onClose={() => setSelected(null)}
         />
+      )}
+
+      {showTutorial && (
+        <TutorialOverlay onDismiss={handleTutorialDismiss} />
       )}
     </>
   );

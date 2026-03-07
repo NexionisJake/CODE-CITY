@@ -3,14 +3,91 @@
 @tailwind utilities;
 
 body {
-  margin: 0;
-  padding: 0;
-  background: #030712;
-  color: #ededed;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  background: #000;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+  font-family: var(--font-geist-mono), 'Courier New', monospace;
 }
 
 @keyframes pulse {
-  from { transform: scaleY(0.6); }
-  to   { transform: scaleY(1.0); }
+  from {
+    transform: scaleY(0.6);
+  }
+
+  to {
+    transform: scaleY(1.0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out forwards;
+}
+
+/* Night mode panel theming — applied to body when night mode is active */
+body.night-mode .city-panel {
+  background: rgba(10, 12, 30, 0.97);
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+body.night-mode .city-panel-header {
+  background: rgba(30, 27, 75, 0.40);
 }

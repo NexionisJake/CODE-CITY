@@ -2,6 +2,39 @@
 import { useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
 
+const QUEST_VISUAL: Record<string, { icon: string; color: string; borderColor: string; bgColor: string }> = {
+    architecture: {
+        icon: "🏛️",
+        color: "text-blue-400",
+        borderColor: "border-blue-500/50",
+        bgColor: "bg-blue-500/5 hover:bg-blue-500/10",
+    },
+    data_flow: {
+        icon: "🌊",
+        color: "text-cyan-400",
+        borderColor: "border-cyan-500/50",
+        bgColor: "bg-cyan-500/5 hover:bg-cyan-500/10",
+    },
+    hotspots: {
+        icon: "🔥",
+        color: "text-red-400",
+        borderColor: "border-red-500/50",
+        bgColor: "bg-red-500/5 hover:bg-red-500/10",
+    },
+    onboarding: {
+        icon: "👋",
+        color: "text-green-400",
+        borderColor: "border-green-500/50",
+        bgColor: "bg-green-500/5 hover:bg-green-500/10",
+    },
+    dependencies: {
+        icon: "🕸️",
+        color: "text-purple-400",
+        borderColor: "border-purple-500/50",
+        bgColor: "bg-purple-500/5 hover:bg-purple-500/10",
+    },
+};
+
 interface QuestStep {
     building_id: string;
     building_name: string;
@@ -26,10 +59,13 @@ interface Props {
     data: any;
     controlsRef: React.RefObject<any>;
     onHighlight: (ids: Set<string>) => void;
+    onFlyTo?: (pos: { x: number; z: number }) => void;
+    isOpen: boolean;
+    onOpen: () => void;
+    onClose: () => void;
 }
 
-export default function SherpaMode({ data, controlsRef, onHighlight }: Props) {
-    const [open, setOpen] = useState(false);
+export default function SherpaMode({ data, controlsRef, onHighlight, isOpen, onOpen, onClose }: Props) {
     const [questTypes, setQuestTypes] = useState<QuestType[]>([]);
     const [activeQuest, setActiveQuest] = useState<Quest | null>(null);
     const [currentStep, setCurrentStep] = useState(0);
@@ -90,7 +126,7 @@ export default function SherpaMode({ data, controlsRef, onHighlight }: Props) {
             const quest: Quest = await resp.json();
             setActiveQuest(quest);
             setCurrentStep(0);
-            setOpen(false);
+            onClose(); // close the picker panel
             // Fly to first stop
             if (quest.steps.length > 0) {
                 flyToBuilding(quest.steps[0].building_id);
@@ -125,10 +161,10 @@ export default function SherpaMode({ data, controlsRef, onHighlight }: Props) {
             {/* Sherpa toggle button */}
             {!activeQuest && (
                 <button
-                    onClick={() => setOpen(o => !o)}
-                    className={`absolute top-16 right-4 z-20 flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${open
-                            ? "bg-emerald-900/90 border-emerald-500 text-emerald-300"
-                            : "bg-gray-900/90 border-gray-700 text-gray-300 hover:border-gray-500"
+                    onClick={() => isOpen ? onClose() : onOpen()}
+                    className={`absolute top-16 right-4 z-20 flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${isOpen
+                        ? "bg-emerald-900/90 border-emerald-500 text-emerald-300"
+                        : "bg-gray-900/90 border-gray-700 text-gray-300 hover:border-gray-500"
                         }`}
                 >
                     🧭 Sherpa Mode
@@ -136,33 +172,72 @@ export default function SherpaMode({ data, controlsRef, onHighlight }: Props) {
             )}
 
             {/* Quest picker panel */}
-            {open && !activeQuest && (
-                <div className="absolute top-28 right-4 z-20 w-72 bg-gray-900/95 backdrop-blur border border-gray-700 rounded-xl overflow-hidden shadow-2xl">
-                    <div className="px-4 py-3 border-b border-gray-700">
+            {isOpen && !activeQuest && (
+                <div className="city-panel absolute top-28 right-4 z-20 w-72 bg-gray-900/95 backdrop-blur border border-gray-700 rounded-xl overflow-hidden shadow-2xl animate-fade-in">
+                    <div className="city-panel-header px-4 py-3 border-b border-gray-700">
                         <h3 className="text-white font-bold text-sm">🧭 Choose Your Quest</h3>
                         <p className="text-gray-400 text-xs mt-1">
                             AI will guide you through the codebase
                         </p>
                     </div>
 
-                    <div className="p-2">
-                        {questTypes.map(qt => (
-                            <button
-                                key={qt.id}
-                                onClick={() => startQuest(qt.id)}
-                                disabled={generating}
-                                className="w-full text-left px-3 py-3 rounded-lg hover:bg-gray-800 transition-colors mb-1 disabled:opacity-50"
-                            >
-                                <div className="text-white text-sm font-medium">{qt.title}</div>
-                                <div className="text-gray-400 text-xs mt-0.5">{qt.description}</div>
-                            </button>
-                        ))}
+                    <div className="p-3 space-y-2">
+                        {questTypes.map(qt => {
+                            const visual = QUEST_VISUAL[qt.id] ?? {
+                                icon: "🗺️", color: "text-gray-400",
+                                borderColor: "border-gray-600", bgColor: "bg-gray-800/50 hover:bg-gray-800",
+                            };
+                            return (
+                                <button
+                                    key={qt.id}
+                                    onClick={() => startQuest(qt.id)}
+                                    disabled={generating}
+                                    className={`
+                                w-full text-left px-3 py-3 rounded-xl border-l-2 transition-all duration-200
+                                disabled:opacity-40 disabled:cursor-not-allowed
+                                hover:scale-[1.02] hover:shadow-lg group
+                                ${visual.bgColor} ${visual.borderColor}
+                                `}
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        {/* Icon */}
+                                        <span className="text-xl flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
+                                            {visual.icon}
+                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className={`text-sm font-semibold ${visual.color} mb-0.5`}>
+                                                {qt.title}
+                                            </div>
+                                            <div className="text-gray-400 text-xs leading-snug">
+                                                {qt.description}
+                                            </div>
+                                        </div>
+                                        {/* Arrow — appears on hover */}
+                                        <svg
+                                            width="14" height="14" viewBox="0 0 14 14" fill="none"
+                                            stroke="currentColor" strokeWidth="1.5"
+                                            className={`flex-shrink-0 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200 ${visual.color}`}
+                                        >
+                                            <path d="M3 7h8M8 4l3 3-3 3" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {generating && (
-                        <div className="px-4 py-3 border-t border-gray-700 text-center">
-                            <div className="text-emerald-400 text-sm animate-pulse">
-                                🤖 Sherpa is planning your route...
+                        <div className="px-4 py-4 border-t border-gray-700/60 flex flex-col items-center gap-3">
+                            {/* Spinner */}
+                            <div className="relative">
+                                <div className="w-8 h-8 rounded-full border-2 border-emerald-900 border-t-emerald-400 animate-spin" />
+                                <span className="absolute inset-0 flex items-center justify-center text-sm">
+                                    🧭
+                                </span>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-emerald-400 text-sm font-medium">Planning your route…</p>
+                                <p className="text-gray-500 text-xs mt-0.5">Claude is choosing the best stops</p>
                             </div>
                         </div>
                     )}
@@ -171,10 +246,10 @@ export default function SherpaMode({ data, controlsRef, onHighlight }: Props) {
 
             {/* Active quest UI — bottom panel */}
             {activeQuest && (
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 w-[520px] max-w-[90vw] bg-gray-900/97 backdrop-blur border border-emerald-700/50 rounded-2xl shadow-2xl overflow-hidden">
+                <div className="city-panel absolute bottom-6 left-1/2 -translate-x-1/2 z-20 w-[520px] max-w-[90vw] bg-gray-900/97 backdrop-blur border border-emerald-700/50 rounded-2xl shadow-2xl overflow-hidden">
 
                     {/* Quest header */}
-                    <div className="flex items-center justify-between px-5 py-3 bg-emerald-900/30 border-b border-emerald-700/30">
+                    <div className="city-panel-header flex items-center justify-between px-5 py-3 bg-emerald-900/30 border-b border-emerald-700/30">
                         <div>
                             <div className="text-emerald-300 font-bold text-sm">{activeQuest.title}</div>
                             <div className="text-gray-400 text-xs mt-0.5">{activeQuest.description}</div>
@@ -185,22 +260,23 @@ export default function SherpaMode({ data, controlsRef, onHighlight }: Props) {
                         >×</button>
                     </div>
 
-                    {/* Step progress dots */}
-                    <div className="flex items-center gap-1.5 px-5 pt-3">
-                        {activeQuest.steps.map((_, i) => (
+                    {/* Step dots */}
+                    <div className="flex items-center gap-1.5 px-5 pt-4 pb-2">
+                        {activeQuest.steps.map((step, i) => (
                             <button
                                 key={i}
                                 onClick={() => goToStep(i)}
-                                className={`h-1.5 rounded-full transition-all ${i === currentStep
-                                        ? "bg-emerald-400 w-6"
-                                        : i < currentStep
-                                            ? "bg-emerald-700 w-3"
-                                            : "bg-gray-600 w-3"
+                                title={step.building_name}
+                                className={`transition-all duration-300 rounded-full ${i === currentStep
+                                    ? "bg-emerald-400 w-6 h-2"
+                                    : i < currentStep
+                                        ? "bg-emerald-700 w-2 h-2 hover:bg-emerald-600"
+                                        : "bg-gray-600 w-2 h-2 hover:bg-gray-500"
                                     }`}
                             />
                         ))}
-                        <span className="text-gray-500 text-xs ml-2">
-                            {currentStep + 1} / {activeQuest.steps.length}
+                        <span className="text-gray-500 text-xs ml-2 flex-shrink-0">
+                            Stop {currentStep + 1} of {activeQuest.steps.length}
                         </span>
                     </div>
 
@@ -208,16 +284,30 @@ export default function SherpaMode({ data, controlsRef, onHighlight }: Props) {
                     {activeQuest.steps[currentStep] && (
                         <div className="px-5 py-4">
                             <div className="flex items-start gap-3">
-                                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
-                                    <span className="text-emerald-400 text-xs font-bold">
+                                {/* Step number badge */}
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mt-0.5">
+                                    <span className="text-emerald-400 text-sm font-bold">
                                         {activeQuest.steps[currentStep].order}
                                     </span>
                                 </div>
+
                                 <div className="flex-1">
-                                    <div className="text-white font-mono text-sm font-medium mb-2">
-                                        📄 {activeQuest.steps[currentStep].building_name}
+                                    {/* Filename */}
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-xs">📄</span>
+                                        <code className="text-white font-mono text-xs bg-gray-800 px-2 py-0.5 rounded border border-gray-700">
+                                            {activeQuest.steps[currentStep].building_name}
+                                        </code>
+                                        {/* Focus badge */}
+                                        {activeQuest.steps[currentStep].focus && (
+                                            <span className="text-xs text-gray-500 bg-gray-800/60 px-1.5 py-0.5 rounded capitalize">
+                                                {activeQuest.steps[currentStep].focus}
+                                            </span>
+                                        )}
                                     </div>
-                                    <p className="text-gray-300 text-sm leading-relaxed">
+
+                                    {/* Narration — with a left accent */}
+                                    <p className="text-gray-300 text-sm leading-relaxed border-l-2 border-emerald-500/30 pl-3">
                                         {activeQuest.steps[currentStep].narration}
                                     </p>
                                 </div>

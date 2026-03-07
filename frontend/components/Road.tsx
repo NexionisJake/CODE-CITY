@@ -1,5 +1,6 @@
 "use client";
 import * as THREE from "three";
+import RoadPulse from "./RoadPulse";
 
 const ROAD_HEIGHT = 0.15;
 const MAX_ROAD_LENGTH = 300;
@@ -9,9 +10,10 @@ interface Props {
   startBuilding: any;
   endBuilding: any;
   simplified?: boolean;
+  animated?: boolean;
 }
 
-export default function Road({ road, startBuilding, endBuilding, simplified }: Props) {
+export default function Road({ road, startBuilding, endBuilding, simplified, animated }: Props) {
   if (!startBuilding || !endBuilding) return null;
 
   // Building centers
@@ -121,6 +123,16 @@ export default function Road({ road, startBuilding, endBuilding, simplified }: P
             opacity={0.85}
           />
         </mesh>
+      )}
+
+      {road.directed && animated && totalLength > 5 && (
+        <RoadPulse
+          start={[sx, 0, sz]}
+          end={[ex, 0, ez]}
+          color="#00ccff"
+          speed={0.3}
+          offset={((startBuilding.position.x + endBuilding.position.z) % 100) / 100}
+        />
       )}
     </group>
   );

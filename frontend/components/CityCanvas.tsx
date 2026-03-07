@@ -43,6 +43,7 @@ export default function CityCanvas({ data }: { data: any }) {
   useEffect(() => {
     if (highlightedIds.size === 0 || !controlsRef.current) return;
     const firstId = highlightedIds.values().next().value;
+    if (!firstId) return;
     const b = buildingMap[firstId];
     if (!b) return;
     const target = controlsRef.current.target;
@@ -139,15 +140,25 @@ export default function CityCanvas({ data }: { data: any }) {
         </Suspense>
 
         {/* Road connections */}
-        {data.roads.map((r: any, i: number) => (
-          <Road
-            key={i}
-            road={r}
-            startBuilding={buildingMap[r.start_building_id]}
-            endBuilding={buildingMap[r.end_building_id]}
-            simplified={simplified}
-          />
-        ))}
+        {data.roads.map((r: any, i: number) => {
+          const b1 = buildingMap[r.start_building_id];
+          const b2 = buildingMap[r.end_building_id];
+          const nearCamera = b1 && b2 && (
+            Math.abs(b1.position.x - cameraTarget.x) < 150 &&
+            Math.abs(b1.position.z - cameraTarget.z) < 150
+          );
+
+          return (
+            <Road
+              key={i}
+              road={r}
+              startBuilding={b1}
+              endBuilding={b2}
+              simplified={simplified}
+              animated={nearCamera && !simplified}
+            />
+          );
+        })}
 
         <OrbitControls
           ref={controlsRef}

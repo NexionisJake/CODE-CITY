@@ -89,6 +89,10 @@ NEO4J_PASSWORD=codecity123
 GITHUB_CLIENT_ID=your_github_oauth_client_id
 GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
 FRONTEND_URL=http://localhost:3000
+
+# Social Heat / Slack Bot Integration (App Name: codecity_slackbot)
+# Scopes needed: channels:history, channels:read
+SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
 ```
 > **Note:** The backend has graceful fallbacks. If Redis or Neo4j are not running or configured, it will fall back to in-memory dictionaries automatically so development isn't blocked.
 

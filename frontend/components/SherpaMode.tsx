@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import * as THREE from "three";
+import { DropdownMenu } from "./ui/dropdown-menu";
 
 const QUEST_VISUAL: Record<string, { icon: string; color: string; borderColor: string; bgColor: string }> = {
     architecture: {
@@ -158,95 +159,61 @@ export default function SherpaMode({ data, controlsRef, onHighlight, isOpen, onO
 
     return (
         <>
-            {/* Sherpa toggle button */}
+            {/* Sherpa toggle button and Dropdown */}
             {!activeQuest && (
-                <button
-                    onClick={() => isOpen ? onClose() : onOpen()}
-                    className={`absolute top-16 right-4 z-20 flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${isOpen
-                        ? "bg-emerald-900/90 border-emerald-500 text-emerald-300"
-                        : "bg-gray-900/90 border-gray-700 text-gray-300 hover:border-gray-500"
-                        }`}
-                >
-                    🧭 Sherpa Mode
-                </button>
-            )}
-
-            {/* Quest picker panel */}
-            {isOpen && !activeQuest && (
-                <div className="city-panel absolute top-28 right-4 z-20 w-72 bg-gray-900/95 backdrop-blur border border-gray-700 rounded-xl overflow-hidden shadow-2xl animate-fade-in">
-                    <div className="city-panel-header px-4 py-3 border-b border-gray-700">
-                        <h3 className="text-white font-bold text-sm">🧭 Choose Your Quest</h3>
-                        <p className="text-gray-400 text-xs mt-1">
-                            AI will guide you through the codebase
-                        </p>
-                    </div>
-
-                    <div className="p-3 space-y-2">
-                        {questTypes.map(qt => {
+                <div className="absolute top-16 right-4 z-40">
+                    <DropdownMenu
+                        open={isOpen}
+                        onOpenChange={(open) => open ? onOpen() : onClose()}
+                        menuWidth="w-[320px]"
+                        align="end"
+                        options={questTypes.map(qt => {
                             const visual = QUEST_VISUAL[qt.id] ?? {
                                 icon: "🗺️", color: "text-gray-400",
                                 borderColor: "border-gray-600", bgColor: "bg-gray-800/50 hover:bg-gray-800",
                             };
-                            return (
-                                <button
-                                    key={qt.id}
-                                    onClick={() => startQuest(qt.id)}
-                                    disabled={generating}
-                                    className={`
-                                w-full text-left px-3 py-3 rounded-xl border-l-2 transition-all duration-200
-                                disabled:opacity-40 disabled:cursor-not-allowed
-                                hover:scale-[1.02] hover:shadow-lg group
-                                ${visual.bgColor} ${visual.borderColor}
-                                `}
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        {/* Icon */}
-                                        <span className="text-xl flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
-                                            {visual.icon}
-                                        </span>
-                                        <div className="flex-1 min-w-0">
-                                            <div className={`text-sm font-semibold ${visual.color} mb-0.5`}>
-                                                {qt.title}
-                                            </div>
-                                            <div className="text-gray-400 text-xs leading-snug">
-                                                {qt.description}
-                                            </div>
+                            return {
+                                label: (
+                                    <div className="flex-1 min-w-0 pr-2">
+                                        <div className={`text-sm font-semibold ${visual.color} mb-0.5`}>
+                                            {qt.title}
                                         </div>
-                                        {/* Arrow — appears on hover */}
-                                        <svg
-                                            width="14" height="14" viewBox="0 0 14 14" fill="none"
-                                            stroke="currentColor" strokeWidth="1.5"
-                                            className={`flex-shrink-0 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200 ${visual.color}`}
-                                        >
-                                            <path d="M3 7h8M8 4l3 3-3 3" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
+                                        <div className="text-gray-400 text-xs leading-snug">
+                                            {qt.description}
+                                        </div>
                                     </div>
-                                </button>
-                            );
+                                ),
+                                Icon: (
+                                    <span className="text-xl flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
+                                        {visual.icon}
+                                    </span>
+                                ),
+                                onClick: () => startQuest(qt.id)
+                            };
                         })}
-                    </div>
-
-                    {generating && (
-                        <div className="px-4 py-4 border-t border-gray-700/60 flex flex-col items-center gap-3">
-                            {/* Spinner */}
-                            <div className="relative">
-                                <div className="w-8 h-8 rounded-full border-2 border-emerald-900 border-t-emerald-400 animate-spin" />
-                                <span className="absolute inset-0 flex items-center justify-center text-sm">
-                                    🧭
-                                </span>
+                        customPanel={generating ? (
+                            <div className="px-4 py-4 flex flex-col items-center gap-3">
+                                {/* Spinner */}
+                                <div className="relative">
+                                    <div className="w-8 h-8 rounded-full border-2 border-emerald-900 border-t-emerald-400 animate-spin" />
+                                    <span className="absolute inset-0 flex items-center justify-center text-sm">
+                                        🧭
+                                    </span>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-emerald-400 text-sm font-medium">Planning your route…</p>
+                                    <p className="text-gray-500 text-xs mt-0.5">Claude is choosing the best stops</p>
+                                </div>
                             </div>
-                            <div className="text-center">
-                                <p className="text-emerald-400 text-sm font-medium">Planning your route…</p>
-                                <p className="text-gray-500 text-xs mt-0.5">Claude is choosing the best stops</p>
-                            </div>
-                        </div>
-                    )}
+                        ) : undefined}
+                    >
+                        <span className="flex items-center gap-2">🧭 Sherpa Mode</span>
+                    </DropdownMenu>
                 </div>
             )}
-
             {/* Active quest UI — bottom panel */}
             {activeQuest && (
-                <div className="city-panel absolute bottom-6 left-1/2 -translate-x-1/2 z-20 w-[520px] max-w-[90vw] bg-gray-900/97 backdrop-blur border border-emerald-700/50 rounded-2xl shadow-2xl overflow-hidden">
+                <div className="city-panel absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-[520px] max-w-[90vw] bg-gray-900/95 backdrop-blur border border-emerald-700/50 rounded-2xl shadow-2xl overflow-hidden">
 
                     {/* Quest header */}
                     <div className="city-panel-header flex items-center justify-between px-5 py-3 bg-emerald-900/30 border-b border-emerald-700/30">

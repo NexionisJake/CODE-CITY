@@ -43,14 +43,16 @@ export default function DistrictOverlay({ buildings, cameraDistance = 200 }: Pro
         const fileCount = buildings.filter(b => b.district === d.label).length;
 
         const getLabelScale = (distance: number) => {
-          if (distance > 300) return 0;        // hidden
-          if (distance > 150) return 0.7;      // small
-          if (distance > 50) return 1.0;      // normal
-          return 1.3;                           // large (zoomed in)
+          if (distance > 1200) return 0;       // hide only when extremely far away
+          if (distance > 600) return 0.5;      // extra small
+          if (distance > 300) return 0.7;      // small
+          if (distance > 150) return 0.9;      // normal
+          if (distance > 50) return 1.1;       // larger
+          return 1.3;                           // maximum zoomed in
         };
 
         const labelScale = getLabelScale(cameraDistance);
-        const showSubtext = cameraDistance < 150;
+        const showSubtext = cameraDistance < 400; // show file counts up to a larger distance
 
         // Y position varies per district to reduce overlap
         const labelY = 8 + (i % 3) * 4;  // 8, 12, or 16

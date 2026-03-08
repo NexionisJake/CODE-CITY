@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
 
 // ─── Inline Markdown + Clickable Filenames Renderer ─────────────────────────
 
@@ -231,7 +232,7 @@ export default function AskTheCity({ data, onHighlight, isOpen, onOpen, onClose,
             if (result.mentioned_ids?.length > 0) {
                 onHighlight(new Set(result.mentioned_ids));
             }
-        } catch (e) {
+        } catch {
             setMessages(prev => [...prev, {
                 role: "assistant",
                 content: "Sorry, I couldn't reach the AI right now. Try again.",
@@ -247,7 +248,7 @@ export default function AskTheCity({ data, onHighlight, isOpen, onOpen, onClose,
             {/* Toggle button */}
             <button
                 onClick={() => isOpen ? onClose() : onOpen()}
-                className={`absolute top-28 right-4 z-20 flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${isOpen
+                className={`absolute top-28 right-4 z-30 flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${isOpen
                     ? "bg-blue-900/90 border-blue-500 text-blue-300 shadow-lg shadow-blue-500/20"
                     : "bg-gray-900/90 border-gray-700 text-gray-300 hover:border-gray-500"
                     }`}
@@ -262,7 +263,7 @@ export default function AskTheCity({ data, onHighlight, isOpen, onOpen, onClose,
 
             {/* Chat panel */}
             {isOpen && (
-                <div className="city-panel absolute top-40 right-4 z-20 w-80 bg-gray-900/97 backdrop-blur border border-blue-700/40 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in"
+                <div className="city-panel absolute top-40 right-4 z-30 w-80 bg-gray-900/95 backdrop-blur border border-blue-700/40 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in"
                     style={{ height: 420 }}
                 >
                     {/* Header */}
@@ -414,25 +415,15 @@ export default function AskTheCity({ data, onHighlight, isOpen, onOpen, onClose,
                     )}
 
                     {/* Input */}
-                    <div className="px-3 pb-3 flex-shrink-0 border-t border-gray-800 pt-2">
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={input}
-                                onChange={e => setInput(e.target.value)}
-                                onKeyDown={e => e.key === "Enter" && sendMessage(input)}
-                                placeholder="Ask about the codebase..."
-                                disabled={loading || !data}
-                                className="flex-1 bg-gray-800 text-white text-sm rounded-lg px-3 py-2 outline-none border border-gray-700 focus:border-blue-500 placeholder-gray-500 disabled:opacity-50"
-                            />
-                            <button
-                                onClick={() => sendMessage(input)}
-                                disabled={loading || !input.trim() || !data}
-                                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-30 text-white rounded-lg px-3 py-2 text-sm transition"
-                            >
-                                →
-                            </button>
-                        </div>
+                    <div className="flex-shrink-0 border-t border-gray-800 bg-gray-900">
+                        <AIInputWithLoading
+                            placeholder="Ask about the codebase..."
+                            onSubmit={sendMessage}
+                            className="py-2"
+                            minHeight={40}
+                            maxHeight={120}
+                            loadingDuration={0}
+                        />
                     </div>
                 </div>
             )}

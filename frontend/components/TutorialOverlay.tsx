@@ -112,7 +112,7 @@ export default function TutorialOverlay({ onDismiss }: Props) {
                 className="relative pointer-events-auto animate-slide-up"
                 style={{ animationDuration: '0.4s' }}
             >
-                <div className="bg-gray-900/97 backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl overflow-hidden"
+                <div className="bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl overflow-hidden"
                     style={{ width: 480 }}>
 
                     {/* Header */}
@@ -220,7 +220,7 @@ export default function TutorialOverlay({ onDismiss }: Props) {
                             </svg>
                             <button
                                 onClick={handleDismiss}
-                                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                                className="text-xs text-gray-400 hover:text-white transition-colors"
                             >
                                 Got it
                             </button>

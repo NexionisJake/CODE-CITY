@@ -16,8 +16,7 @@ import SherpaMode from "./SherpaMode";
 import AskTheCity from "./AskTheCity";
 import ColorLegend from "./ColorLegend";
 import TutorialOverlay from "./TutorialOverlay";
-import SwitchToggleThemeDemo from "./ui/toggle-theme";
-import { RippleButton } from "@/components/ui/multi-type-ripple-buttons";
+import SwitchToggleThemeDemo from "@/components/ui/toggle-theme";
 
 interface Props {
   data: any;
@@ -505,62 +504,47 @@ export default function CityCanvas({ data, nightMode = false, onNightModeToggle 
       {/* Clickable stats bar + camera controls — top-right */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-1">
         <div className="flex items-center bg-gray-900/90 backdrop-blur border border-gray-700 rounded-lg overflow-hidden text-sm">
-          {statItems.map((stat, i) => {
-            const isClickable = !!stat.filter;
-            const content = (
-              <>
-                <span className="text-xs">{stat.icon}</span>
-                <span className={`font-semibold ${'color' in stat ? stat.color : 'text-gray-200'}`}>
-                  {stat.value}
-                </span>
-                <span className="text-gray-500 text-xs hidden sm:inline">{stat.label}</span>
-                {/* Active filter indicator dot */}
-                {statFilter === stat.filter && stat.filter && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse ml-0.5" />
-                )}
-              </>
-            );
-
-            const baseClass = `flex items-center gap-1.5 px-3 py-2 ${i > 0 ? 'border-l border-gray-700/60' : ''}`;
-            const activeClass = statFilter === stat.filter && stat.filter ? 'bg-gray-700/60' : '';
-
-            if (isClickable) {
-              return (
-                <RippleButton
-                  key={stat.label}
-                  variant="ghost"
-                  className={`${baseClass} !rounded-none hover:bg-gray-700/50 transition-colors ${activeClass}`}
-                  onClick={() => {
-                    setStatFilter(f => f === stat.filter ? null : stat.filter);
-                    if (stat.filter !== statFilter) handleSearch("");
-                  }}
-                  title={stat.tip}
-                >
-                  {content}
-                </RippleButton>
-              );
-            }
-
-            return (
-              <div key={stat.label} className={baseClass} title={stat.tip}>
-                {content}
-              </div>
-            );
-          })}
+          {statItems.map((stat, i) => (
+            <div
+              key={stat.label}
+              className={`
+                flex items-center gap-1.5 px-3 py-2
+                ${i > 0 ? 'border-l border-gray-700/60' : ''}
+                ${stat.filter ? 'cursor-pointer hover:bg-gray-700/50 transition-colors' : ''}
+                ${statFilter === stat.filter && stat.filter ? 'bg-gray-700/60' : ''}
+              `}
+              onClick={() => {
+                if (stat.filter) {
+                  setStatFilter(f => f === stat.filter ? null : stat.filter);
+                  if (stat.filter !== statFilter) handleSearch("");
+                }
+              }}
+              title={stat.tip}
+            >
+              <span className="text-xs">{stat.icon}</span>
+              <span className={`font-semibold ${'color' in stat ? stat.color : 'text-gray-200'}`}>
+                {stat.value}
+              </span>
+              <span className="text-gray-500 text-xs hidden sm:inline">{stat.label}</span>
+              {/* Active filter indicator dot */}
+              {statFilter === stat.filter && stat.filter && (
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse ml-0.5" />
+              )}
+            </div>
+          ))}
         </div>
 
         {/* Camera reset button */}
-        <RippleButton
-          variant="ghost"
+        <button
           onClick={() => resetCamera()}
-          className="ml-1 flex items-center gap-1.5 bg-gray-900/90 backdrop-blur border border-gray-700 hover:border-gray-500 !rounded-lg px-3 py-2 text-gray-400 hover:text-white text-xs transition-all duration-200"
+          className="ml-1 flex items-center gap-1.5 bg-gray-900/90 backdrop-blur border border-gray-700 hover:border-gray-500 rounded-lg px-3 py-2 text-gray-400 hover:text-white text-xs transition-all duration-200"
           title="Reset camera view (Home)"
         >
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4">
             <path d="M1.5 6.5h10M6.5 1.5v10M3 4l-1.5 2.5L3 9M10 4l1.5 2.5L10 9" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span className="hidden sm:inline">Reset</span>
-        </RippleButton>
+        </button>
 
         {/* Night mode toggle */}
         {onNightModeToggle && (
@@ -571,14 +555,13 @@ export default function CityCanvas({ data, nightMode = false, onNightModeToggle 
         )}
 
         {/* Help button */}
-        <RippleButton
-          variant="ghost"
+        <button
           onClick={() => setShowTutorial(true)}
-          className="ml-1 w-8 h-8 px-0 flex items-center justify-center bg-gray-900/90 backdrop-blur border border-gray-700 hover:border-gray-500 !rounded-lg text-gray-500 hover:text-gray-300 transition-all duration-150 text-sm font-bold"
+          className="ml-1 w-8 h-8 flex items-center justify-center bg-gray-900/90 backdrop-blur border border-gray-700 hover:border-gray-500 rounded-lg text-gray-500 hover:text-gray-300 transition-all duration-150 text-sm font-bold"
           title="Show controls guide"
         >
           ?
-        </RippleButton>
+        </button>
       </div>
 
       {/* Minimap — bottom-right */}

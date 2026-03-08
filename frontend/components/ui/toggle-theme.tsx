@@ -19,7 +19,7 @@ const SwitchToggleThemeDemo = ({ isDark, onToggle }: SwitchToggleThemeProps) => 
                 id={`${id}-light`}
                 className={cn(
                     "cursor-pointer text-left text-sm font-medium transition-colors duration-200",
-                    isDark ? "text-gray-500 hover:text-gray-400" : "text-amber-400"
+                    !isDark ? "text-amber-400" : "text-gray-500 hover:text-gray-400"
                 )}
                 aria-controls={id}
                 onClick={() => onToggle(false)}
@@ -40,7 +40,7 @@ const SwitchToggleThemeDemo = ({ isDark, onToggle }: SwitchToggleThemeProps) => 
                 id={`${id}-dark`}
                 className={cn(
                     "cursor-pointer text-right text-sm font-medium transition-colors duration-200",
-                    !isDark ? "text-gray-500 hover:text-gray-400" : "text-indigo-400"
+                    isDark ? "text-indigo-400" : "text-gray-500 hover:text-gray-400"
                 )}
                 aria-controls={id}
                 onClick={() => onToggle(true)}

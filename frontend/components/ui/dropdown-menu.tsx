@@ -1,6 +1,6 @@
 "use client";
 
-import { HoverButton } from "@/components/ui/hover-glow-button";
+import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -56,13 +56,9 @@ const DropdownMenu = ({
 
     return (
         <div className="relative">
-            <HoverButton
+            <Button
                 onClick={toggleDropdown}
-                backgroundColor="rgba(17, 17, 17, 0.6)"
-                glowColor="#10b981"
-                textColor="#ffffff"
-                hoverTextColor="#ffffff"
-                className="px-4 py-2 shadow-[0_0_20px_rgba(0,0,0,0.2)] border border-[#ffffff10] rounded-xl backdrop-blur-sm"
+                className="px-4 py-2 bg-[#11111198] hover:bg-[#111111d1] shadow-[0_0_20px_rgba(0,0,0,0.2)] border-none rounded-xl backdrop-blur-sm text-white"
             >
                 {children ?? "Menu"}
                 <>
@@ -74,7 +70,7 @@ const DropdownMenu = ({
                         {isUp ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </motion.span>
                 </>
-            </HoverButton>
+            </Button>
 
             <AnimatePresence>
                 {isOpen && (

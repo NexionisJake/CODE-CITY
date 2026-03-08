@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { AIInputWithLoading } from "@/components/ui/ai-input-with-loading";
+import { HoverButton } from "@/components/ui/hover-glow-button";
 
 // ─── Inline Markdown + Clickable Filenames Renderer ─────────────────────────
 
@@ -246,11 +247,15 @@ export default function AskTheCity({ data, onHighlight, isOpen, onOpen, onClose,
     return (
         <>
             {/* Toggle button */}
-            <button
+            <HoverButton
                 onClick={() => isOpen ? onClose() : onOpen()}
+                backgroundColor={isOpen ? "rgba(30, 58, 138, 0.9)" : "rgba(17, 24, 39, 0.9)"}
+                glowColor="#3b82f6"
+                textColor={isOpen ? "#93c5fd" : "#d1d5db"}
+                hoverTextColor="#ffffff"
                 className={`absolute top-28 right-4 z-30 flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${isOpen
-                    ? "bg-blue-900/90 border-blue-500 text-blue-300 shadow-lg shadow-blue-500/20"
-                    : "bg-gray-900/90 border-gray-700 text-gray-300 hover:border-gray-500"
+                    ? "border-blue-500 shadow-lg shadow-blue-500/20"
+                    : "border-gray-700 hover:border-gray-500"
                     }`}
             >
                 💬 Ask the City
@@ -259,7 +264,7 @@ export default function AskTheCity({ data, onHighlight, isOpen, onOpen, onClose,
                         ?
                     </span>
                 )}
-            </button>
+            </HoverButton>
 
             {/* Chat panel */}
             {isOpen && (

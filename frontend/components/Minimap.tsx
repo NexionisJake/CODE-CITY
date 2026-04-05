@@ -4,13 +4,14 @@ import { useState, useMemo } from "react";
 interface Props {
   buildings: any[];
   cameraTarget: { x: number; z: number };
+  cameraDistance?: number;
   onNavigate?: (worldX: number, worldZ: number) => void;
 }
 
 const MAP_SIZE = 180; // px
 const PADDING = 10;  // px
 
-export default function Minimap({ buildings, cameraTarget, onNavigate }: Props) {
+export default function Minimap({ buildings, cameraTarget, cameraDistance = 200, onNavigate }: Props) {
   const [collapsed, setCollapsed] = useState(false);
 
   // Calculate city bounds

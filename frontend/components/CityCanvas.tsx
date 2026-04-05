@@ -582,6 +582,7 @@ export default function CityCanvas({ data, nightMode = false, onNightModeToggle 
       <Minimap
         buildings={data.buildings}
         cameraTarget={cameraTarget}
+        cameraDistance={cameraDistance}
         onNavigate={(worldX, worldZ) => {
           if (!controlsRef.current) return;
           const target = new THREE.Vector3(worldX, 0, worldZ);

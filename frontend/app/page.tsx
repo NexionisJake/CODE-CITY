@@ -17,7 +17,6 @@ const EXAMPLE_REPOS = [
     lang: "Python",
     color: "#3b82f6",
     emoji: "🐍",
-    stats: "83 files · 12 districts",
   },
   {
     url: "https://github.com/expressjs/express",
@@ -26,7 +25,6 @@ const EXAMPLE_REPOS = [
     lang: "JavaScript",
     color: "#f59e0b",
     emoji: "⚡",
-    stats: "64 files · 8 districts",
   },
   {
     url: "https://github.com/zulip/zulip-terminal",
@@ -35,7 +33,6 @@ const EXAMPLE_REPOS = [
     lang: "Python",
     color: "#10b981",
     emoji: "💬",
-    stats: "69 files · 6 districts",
   },
 ];
 
@@ -95,7 +92,8 @@ export default function Home() {
     return () => document.body.classList.remove("night-mode");
   }, [nightMode]);
 
-  async function handleBuild() {
+  async function handleBuild(urlOverride?: string) {
+    const buildUrl = urlOverride ?? url;
     setLoading(true);
     setError(null);
     setCityData(null);
@@ -107,7 +105,7 @@ export default function Home() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ repo_url: url }),
+          body: JSON.stringify({ repo_url: buildUrl }),
         }
       );
 
@@ -256,7 +254,7 @@ export default function Home() {
         <div className="flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-2">
-              <img src={user.avatar_url} className="w-7 h-7 rounded-full" />
+              <img src={user.avatar_url} alt={user.login} className="w-7 h-7 rounded-full" />
               <span className="text-gray-300 text-sm">{user.login}</span>
               <button
                 onClick={() => fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
@@ -417,7 +415,7 @@ export default function Home() {
                   {EXAMPLE_REPOS.map((repo, i) => (
                     <button
                       key={repo.url}
-                      onClick={() => { setUrl(repo.url); }}
+                      onClick={() => { setUrl(repo.url); handleBuild(repo.url); }}
                       className="group flex flex-col gap-1 bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-gray-500 rounded-xl px-4 py-3 text-left transition-all duration-200 hover:scale-[1.03] hover:shadow-lg"
                       style={{
                         animation: `slideUp 0.4s ease-out ${0.15 + i * 0.08}s both`,
@@ -435,7 +433,6 @@ export default function Home() {
                       </div>
                       <div className="text-white text-sm font-medium">{repo.label}</div>
                       <div className="text-gray-500 text-xs">{repo.desc}</div>
-                      <div className="text-gray-600 text-xs mt-1">{repo.stats}</div>
                       <div
                         className="mt-2 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity"
                         style={{ color: repo.color }}
@@ -547,7 +544,7 @@ export default function Home() {
         )}
 
         {/* Toast notifications */}
-        <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none" style={{ maxWidth: 340 }}>
+        <div className="absolute bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none" style={{ maxWidth: 340 }}>
           {toasts.map(toast => (
             <div
               key={toast.id}

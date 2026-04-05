@@ -128,6 +128,7 @@ export default function CityCanvas({ data, nightMode = false, onNightModeToggle 
   const [askTheCityHighlightIds, setAskTheCityHighlightIds] = useState<Set<string>>(new Set());
   const [activePanel, setActivePanel] = useState<"sherpa" | "ask" | null>(null);
   const [statFilter, setStatFilter] = useState<"hotspots" | "discussed" | "recent" | null>(null);
+  const [canvasVisible, setCanvasVisible] = useState(false);
   const controlsRef = useRef<any>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -135,6 +136,12 @@ export default function CityCanvas({ data, nightMode = false, onNightModeToggle 
   // (use sessionStorage so it shows once per session, not per page load)
   const [showTutorial, setShowTutorial] = useState(false);
   const [cameraDistance, setCameraDistance] = useState(200);
+
+  // Fade the canvas in on mount
+  useEffect(() => {
+    const timer = setTimeout(() => setCanvasVisible(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Show tutorial when city first loads
   useEffect(() => {
@@ -329,7 +336,11 @@ export default function CityCanvas({ data, nightMode = false, onNightModeToggle 
         gl={{ antialias: true, powerPreference: "high-performance" }}
         dpr={[1, 1.5]}
         camera={{ position: [camX, camHeight, camZ], fov: 55, near: 1, far: 8000 }}
-        style={{ background: "#b8d4e8" }}
+        style={{
+          background: "#b8d4e8",
+          opacity: canvasVisible ? 1 : 0,
+          transition: 'opacity 500ms ease-out',
+        }}
       >
         {/* Dynamic lighting that lerps between day/night */}
         <DynamicLights nightMode={nightMode} />
@@ -371,7 +382,7 @@ export default function CityCanvas({ data, nightMode = false, onNightModeToggle 
 
         {/* Kenney building models */}
         <Suspense fallback={null}>
-          {data.buildings.map((b: any) => (
+          {data.buildings.map((b: any, i: number) => (
             <group key={b.id}>
               <Building
                 building={b}
@@ -379,6 +390,7 @@ export default function CityCanvas({ data, nightMode = false, onNightModeToggle 
                 highlighted={effectiveHighlights.has(b.id)}
                 dimmed={hasHighlight && !effectiveHighlights.has(b.id)}
                 nightMode={nightMode}
+                revealDelay={Math.min(i * 30, 1200)}
               />
               {b.metadata.social?.heat_score > 0 && (
                 <SocialHalo
@@ -548,10 +560,12 @@ export default function CityCanvas({ data, nightMode = false, onNightModeToggle 
 
         {/* Night mode toggle */}
         {onNightModeToggle && (
-          <SwitchToggleThemeDemo
-            isDark={nightMode}
-            onToggle={() => onNightModeToggle()}
-          />
+          <div title="Night Mode (N)">
+            <SwitchToggleThemeDemo
+              isDark={nightMode}
+              onToggle={() => onNightModeToggle()}
+            />
+          </div>
         )}
 
         {/* Help button */}

@@ -1,6 +1,7 @@
 "use client";
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
 
 interface Props {
@@ -53,16 +54,27 @@ export default function SocialHalo({ position, dimensions, heatScore, messageCou
                 />
             </mesh>
 
-            {/* Message count badge — floating above building */}
+            {/* Message count badge — floating pill above building corner */}
             {messageCount > 0 && (
-                <mesh position={[position.x + outerR * 0.7, position.y * 2 + 2, position.z + outerR * 0.7]}>
-                    <sphereGeometry args={[1.0, 8, 8]} />
-                    <meshStandardMaterial
-                        color="#ff3300"
-                        emissive="#ff3300"
-                        emissiveIntensity={1.5}
-                    />
-                </mesh>
+                <Html
+                    position={[position.x + outerR * 0.7, position.y + 4, position.z + outerR * 0.7]}
+                    center
+                    style={{ pointerEvents: "none" }}
+                >
+                    <div style={{
+                        background: "rgba(10,10,20,0.92)",
+                        color: "#fb923c",
+                        padding: "3px 8px",
+                        borderRadius: "999px",
+                        fontSize: "11px",
+                        fontFamily: "monospace",
+                        whiteSpace: "nowrap",
+                        border: "1px solid rgba(251,146,60,0.4)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                    }}>
+                        💬 {messageCount}
+                    </div>
+                </Html>
             )}
         </group>
     );

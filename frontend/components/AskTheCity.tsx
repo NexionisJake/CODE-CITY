@@ -264,7 +264,7 @@ export default function AskTheCity({ data, onHighlight, isOpen, onOpen, onClose,
             {/* Chat panel */}
             {isOpen && (
                 <div className="city-panel absolute top-40 right-4 z-30 w-80 bg-gray-900/95 backdrop-blur border border-blue-700/40 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in"
-                    style={{ height: 420 }}
+                    style={{ height: 'min(420px, calc(100vh - 200px))' }}
                 >
                     {/* Header */}
                     <div className="city-panel-header flex items-center justify-between px-4 py-3 bg-blue-900/30 border-b border-blue-700/30 flex-shrink-0">
@@ -391,28 +391,49 @@ export default function AskTheCity({ data, onHighlight, isOpen, onOpen, onClose,
                         )}
                     </div>
 
-                    {/* Suggested questions (shown when no user messages yet) */}
-                    {messages.filter(m => m.role === "user").length === 0 && (
-                        <div className="px-3 pb-2 flex-shrink-0">
-                            <p className="text-gray-500 text-xs mb-2 font-medium">Try asking:</p>
-                            <div className="space-y-1.5">
-                                {[
-                                    "Which files should I look at first as a new developer?",
-                                    "What is actively being discussed by the team?",
-                                    "Trace the main data flow through this codebase",
-                                    "Which files are the biggest risk for bugs?",
-                                ].map((q, i) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => sendMessage(q)}
-                                        className="w-full text-left text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-3 py-2 rounded-lg transition-all duration-150 border border-transparent hover:border-gray-600 leading-snug"
-                                    >
-                                        {q}
-                                    </button>
-                                ))}
+                    {/* Suggested questions — collapsed strip after first message */}
+                    {(() => {
+                        const hasUserMessages = messages.some(m => m.role === "user");
+                        const SUGGESTIONS = [
+                            "Which files should I look at first as a new developer?",
+                            "What is actively being discussed by the team?",
+                            "Trace the main data flow through this codebase",
+                            "Which files are the biggest risk for bugs?",
+                        ];
+                        if (!hasUserMessages) {
+                            return (
+                                <div className="px-3 pb-2 flex-shrink-0">
+                                    <p className="text-gray-500 text-xs mb-2 font-medium">Try asking:</p>
+                                    <div className="space-y-1.5">
+                                        {SUGGESTIONS.map((q, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => sendMessage(q)}
+                                                className="w-full text-left text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-3 py-2 rounded-lg transition-all duration-150 border border-transparent hover:border-gray-600 leading-snug"
+                                            >
+                                                {q}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return (
+                            <div className="px-3 pb-1 flex-shrink-0">
+                                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                                    {SUGGESTIONS.map((q, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => sendMessage(q)}
+                                            className="flex-shrink-0 text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-2.5 py-1 rounded-full border border-gray-700 hover:border-gray-500 transition-all duration-150 whitespace-nowrap"
+                                        >
+                                            {q.length > 30 ? q.slice(0, 28) + "…" : q}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Input */}
                     <div className="flex-shrink-0 border-t border-gray-800 bg-gray-900">

@@ -9,8 +9,8 @@ export default function ColorLegend() {
         {
             category: "Building Height",
             items: [
-                { label: "Short building — few lines of code (< 50 LOC)" },
-                { label: "Tall building — many lines of code (> 400 LOC)" },
+                { bar: 4,  label: "Short building — few lines of code (< 50 LOC)" },
+                { bar: 14, label: "Tall building — many lines of code (> 400 LOC)" },
             ],
         },
         {
@@ -81,12 +81,22 @@ export default function ColorLegend() {
                                 <div className="space-y-1.5">
                                     {cat.items.map((item: any, i) => (
                                         <div key={i} className="flex items-center gap-2.5">
-                                            {/* Color swatch or emoji or placeholder */}
+                                            {/* Color swatch, height bar, emoji, or placeholder */}
                                             {item.swatch ? (
                                                 <div
                                                     className="w-3.5 h-3.5 rounded-full flex-shrink-0"
                                                     style={{ background: item.swatch, boxShadow: `0 0 4px ${item.swatch}80` }}
                                                 />
+                                            ) : item.bar ? (
+                                                <div className="w-3.5 flex-shrink-0 flex items-end justify-center" style={{ height: 14 }}>
+                                                    <div style={{
+                                                        width: 8,
+                                                        height: item.bar,
+                                                        background: '#60a5fa',
+                                                        borderRadius: '1px 1px 0 0',
+                                                        opacity: 0.8,
+                                                    }} />
+                                                </div>
                                             ) : item.emoji ? (
                                                 <span className="text-sm flex-shrink-0">{item.emoji}</span>
                                             ) : (

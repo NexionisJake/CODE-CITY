@@ -100,9 +100,9 @@ export default function Minimap({ buildings, cameraTarget, onNavigate }: Props) 
               );
             })}
 
-            {/* Viewport indicator */}
+            {/* Viewport indicator — scales with actual camera distance */}
             {(() => {
-              const viewSize = 80; // world units visible — approximate
+              const viewSize = Math.max(40, cameraDistance * 0.8);
               const vx = toMapX(cameraTarget.x - viewSize / 2);
               const vz = toMapZ(cameraTarget.z - viewSize / 2);
               const vw = (viewSize / (bounds.maxX - bounds.minX)) * (MAP_SIZE - PADDING * 2);

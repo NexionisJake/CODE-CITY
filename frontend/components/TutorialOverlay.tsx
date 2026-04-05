@@ -102,10 +102,7 @@ export default function TutorialOverlay({ onDismiss }: Props) {
       `}
         >
             {/* Dark overlay — subtle, not full black (so city is still visible) */}
-            <div
-                className="absolute inset-0 bg-black/30 pointer-events-auto"
-                onClick={handleDismiss}
-            />
+            <div className="absolute inset-0 bg-black/30 pointer-events-none" />
 
             {/* Tutorial card */}
             <div

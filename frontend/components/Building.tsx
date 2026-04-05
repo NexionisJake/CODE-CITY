@@ -11,12 +11,14 @@ interface Props {
   highlighted?: boolean;
   dimmed?: boolean;
   nightMode?: boolean;
+  revealDelay?: number; // ms before the rise animation begins
 }
 
-export default function Building({ building, onClick, highlighted, dimmed, nightMode = false }: Props) {
+export default function Building({ building, onClick, highlighted, dimmed, nightMode = false, revealDelay = 0 }: Props) {
   const { file_path, position, dimensions, color, metadata } = building;
   const [hovered, setHovered] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
+  const revealRef = useRef({ delayLeft: revealDelay / 1000, progress: 0 });
 
   const archetype = getArchetype(metadata.loc);
   const modelPath = pickModel(archetype, file_path);
@@ -85,10 +87,37 @@ export default function Building({ building, onClick, highlighted, dimmed, night
     return -box.min.y * measuredScale;
   }, [scene, measuredScale]);
 
+  // Rise-from-ground reveal animation
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    const r = revealRef.current;
+    if (r.progress >= 1) return;
+
+    if (r.delayLeft > 0) {
+      r.delayLeft -= delta;
+      return;
+    }
+
+    r.progress = Math.min(r.progress + delta * 2.5, 1); // ~0.4s per building
+    const t = r.progress;
+    const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    const startY = groundOffset - dimensions.height * 1.5;
+    groupRef.current.position.y = startY + (groundOffset - startY) * eased;
+  });
+
+  // Initialise below ground before first frame
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.y = groundOffset - dimensions.height * 1.5;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <group
       ref={groupRef}
-      position={[position.x, groundOffset, position.z]}
+      position-x={position.x}
+      position-z={position.z}
       scale={[measuredScale, measuredScale, measuredScale]}
       onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); onClick(); }}
       onPointerOver={() => { setHovered(true); document.body.style.cursor = "pointer"; }}
@@ -116,6 +145,14 @@ export default function Building({ building, onClick, highlighted, dimmed, night
             boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
           }}>
             {file_path.split("/").pop()}
+            {(metadata.language || metadata.loc) && (
+              <span style={{ color: "rgba(255,255,255,0.45)", marginLeft: 6 }}>
+                {[
+                  metadata.language,
+                  metadata.loc != null ? `${metadata.loc} LOC` : null,
+                ].filter(Boolean).join(" · ")}
+              </span>
+            )}
           </div>
         </Html>
       )}

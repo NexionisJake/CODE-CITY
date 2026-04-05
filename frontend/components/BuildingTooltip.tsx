@@ -2,6 +2,21 @@
 
 import { getArchetype } from "@/lib/buildingRegistry";
 
+function formatTimestamp(raw: string): string {
+  try {
+    const date = new Date(raw);
+    if (isNaN(date.getTime())) return raw;
+    const diffMs = Date.now() - date.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffDays === 0) return "today";
+    if (diffDays === 1) return "yesterday";
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  } catch {
+    return raw;
+  }
+}
+
 interface BuildingTooltipProps {
   building: any;
   onClose: () => void;
@@ -32,7 +47,7 @@ export default function BuildingTooltip({
 
   return (
     <div
-      className="city-panel absolute bottom-6 left-6 z-20 bg-gray-900/95 backdrop-blur border border-gray-700 rounded-xl w-80 text-white shadow-2xl animate-fade-in"
+      className="city-panel absolute bottom-24 left-6 z-20 bg-gray-900/95 backdrop-blur border border-gray-700 rounded-xl w-80 text-white shadow-2xl animate-fade-in"
       style={{
         borderLeft: `4px solid rgb(${color.r},${color.g},${color.b})`,
         animationDuration: '0.2s',
@@ -94,8 +109,8 @@ export default function BuildingTooltip({
 
       {/* Metrics grid */}
       <div className="grid grid-cols-2 gap-px bg-gray-700/50 border-t border-gray-700">
-        <MetricCell label="Language" value={metadata.language.toUpperCase()} />
-        <MetricCell label="Lines of Code" value={metadata.loc.toLocaleString()} />
+        <MetricCell label="Language" value={(metadata.language ?? 'unknown').toUpperCase()} />
+        <MetricCell label="Lines of Code" value={(metadata.loc ?? 0).toLocaleString()} />
         <MetricCell label="Functions" value={metadata.function_count} />
         <MetricCell label="Complexity" value={`${complexityLabel} (${complexity})`} />
       </div>
@@ -138,7 +153,7 @@ export default function BuildingTooltip({
                     ))}
                   </div>
                 )}
-                <span className="text-gray-600 text-xs mt-0.5 block">{msg.timestamp}</span>
+                <span className="text-gray-600 text-xs mt-0.5 block">{formatTimestamp(msg.timestamp)}</span>
               </div>
             ))}
           </div>

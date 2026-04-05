@@ -71,13 +71,23 @@ export default function SherpaMode({ data, controlsRef, onHighlight, isOpen, onO
     const [activeQuest, setActiveQuest] = useState<Quest | null>(null);
     const [currentStep, setCurrentStep] = useState(0);
     const [generating, setGenerating] = useState(false);
+    const [questError, setQuestError] = useState<string | null>(null);
+
+    const FALLBACK_QUESTS: QuestType[] = [
+        { id: "architecture",  title: "Architecture Tour",   description: "Walk the key structural files of this codebase" },
+        { id: "hotspots",      title: "Hotspot Hunt",        description: "Visit the most complex and risky files" },
+        { id: "data_flow",     title: "Data Flow",           description: "Follow the main data path end to end" },
+        { id: "onboarding",    title: "New Dev Onboarding",  description: "The five files every new contributor should read first" },
+        { id: "dependencies",  title: "Dependency Web",      description: "Explore the most heavily imported modules" },
+    ];
 
     // Load quest types on mount
     useEffect(() => {
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sherpa/quests`)
             .then(r => r.json())
-            .then(d => setQuestTypes(d.quests))
-            .catch(() => { });
+            .then(d => setQuestTypes(d.quests?.length ? d.quests : FALLBACK_QUESTS))
+            .catch(() => setQuestTypes(FALLBACK_QUESTS));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Fly camera to a building
@@ -111,6 +121,7 @@ export default function SherpaMode({ data, controlsRef, onHighlight, isOpen, onO
     // Start a quest
     const startQuest = async (questType: string) => {
         setGenerating(true);
+        setQuestError(null);
         try {
             const resp = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL}/api/sherpa/generate`,
@@ -124,6 +135,7 @@ export default function SherpaMode({ data, controlsRef, onHighlight, isOpen, onO
                     }),
                 }
             );
+            if (!resp.ok) throw new Error(`Server error ${resp.status}`);
             const quest: Quest = await resp.json();
             setActiveQuest(quest);
             setCurrentStep(0);
@@ -132,8 +144,8 @@ export default function SherpaMode({ data, controlsRef, onHighlight, isOpen, onO
             if (quest.steps.length > 0) {
                 flyToBuilding(quest.steps[0].building_id);
             }
-        } catch (e) {
-            console.error("Quest generation failed:", e);
+        } catch {
+            setQuestError("Quest generation failed — try again.");
         } finally {
             setGenerating(false);
         }
@@ -205,6 +217,19 @@ export default function SherpaMode({ data, controlsRef, onHighlight, isOpen, onO
                                     <p className="text-gray-500 text-xs mt-0.5">Claude is choosing the best stops</p>
                                 </div>
                             </div>
+                        ) : questError ? (
+                            <div className="px-4 py-4 flex flex-col items-center gap-3">
+                                <span className="text-2xl">⚠️</span>
+                                <div className="text-center">
+                                    <p className="text-red-400 text-sm font-medium">{questError}</p>
+                                    <button
+                                        onClick={() => setQuestError(null)}
+                                        className="mt-2 text-xs text-gray-500 hover:text-gray-300 transition-colors underline"
+                                    >
+                                        Dismiss
+                                    </button>
+                                </div>
+                            </div>
                         ) : undefined}
                     >
                         <span className="flex items-center gap-2">🧭 Sherpa Mode</span>
@@ -223,7 +248,8 @@ export default function SherpaMode({ data, controlsRef, onHighlight, isOpen, onO
                         </div>
                         <button
                             onClick={exitQuest}
-                            className="text-gray-500 hover:text-white text-lg leading-none"
+                            className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-600 text-gray-400 hover:text-white transition-all duration-150 text-base flex-shrink-0"
+                            title="Exit quest"
                         >×</button>
                     </div>
 

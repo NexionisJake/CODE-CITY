@@ -22,11 +22,12 @@ export default function DistrictOverlay({ buildings, cameraDistance = 200 }: Pro
       rect: { x: number; z: number; w: number; d: number };
       color: { r: number; g: number; b: number };
       label: string;
+      key: string;
     }>();
 
     buildings.forEach(b => {
       if (b.district && b.district_meta && !map.has(b.district)) {
-        map.set(b.district, b.district_meta);
+        map.set(b.district, { ...b.district_meta, key: b.district });
       }
     });
 
@@ -40,7 +41,7 @@ export default function DistrictOverlay({ buildings, cameraDistance = 200 }: Pro
         const cx = rect.x + rect.w / 2;
         const cz = rect.z + rect.d / 2;
         const hexColor = `rgb(${Math.round(color.r * 255)},${Math.round(color.g * 255)},${Math.round(color.b * 255)})`;
-        const fileCount = buildings.filter(b => b.district === d.label).length;
+        const fileCount = buildings.filter(b => b.district === d.key).length;
 
         const getLabelScale = (distance: number) => {
           if (distance > 1200) return 0;       // hide only when extremely far away
